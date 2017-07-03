@@ -1,3 +1,8 @@
+---
+layout: default
+title: 总体架构
+---
+
 # 总体架构
 
 [核心竞争优势](/differentiator.cn.html)
