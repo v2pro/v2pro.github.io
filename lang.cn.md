@@ -200,6 +200,37 @@ tagging.Define(func(p *Product) tagging.Tags {
 * 把 JSON/THRIFT 等序列化的形式也封装成 Accessor，抽象处理所有遍历对象图的需求。
 * 给对象拷贝，验证等需求提供简化的语言抽象（屏蔽了 array/slice 等的区别）。
 
+一个简单的例子
+
+```golang
+import (
+"github.com/v2pro/plz"
+_ "github.com/v2pro/plz/lang/nativeacc"
+)
+
+obj := []int{1, 2, 3}
+accessor := plz.AccessorOf(reflect.TypeOf(obj))
+elemAccessor := accessor.Elem()
+accessor.IterateArray(obj, func(index int, elem interface{}) bool {
+	fmt.Println(elemAccessor.Int(elem))
+	return true
+})
+```
+
+其中 `_ "github.com/v2pro/plz/lang/nativeacc"` 是为了注册原生对象的反射能力。
+
+```golang
+import "github.com/v2pro/plz/lang"
+
+func init() {
+	lang.Providers = append(lang.Providers, accessorOfNativeType)
+}
+
+func accessorOfNativeType(typ reflect.Type) lang.Accessor {
+// ...
+}
+```
+
 Accessor 的 interface 定义为
 
 ```golang
