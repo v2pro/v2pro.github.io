@@ -39,6 +39,23 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 * 顺序写
 * 随机写
 
+### Copy
+
+所有的协议编解码都可以抽象为以下几类对象的通过Accessor实现互相拷贝。当然代码里如果有对象互相拷贝的需求，深拷贝一个对象的需求，也可以使用 Copy：
+
+* map 顺序读 => struct 随机写（比如json绑定到struct）
+* struct 顺序读 => struct 随机写 （mysql协议等有schema的协议解析过程，原始的[]byte读的时候，无法做基于offset的随机定位）
+* struct 顺序读 => map 顺序写 （struct的json序列化）
+* 其他同类型对象的拷贝 （简单赋值）
+
+在拷贝的过程中，如果有类型不符等场景，可以提供 SPI 去做 Accessor 的包装。比如把一个 int 类型的 accessor 转换为 string 类型的 accessor。这样，无论是什么协议的编解码，都可以用统一的方式来做外部扩展。
+
+### Validate
+
+所有的参数验证都可以抽象为对象图的遍历。通过 Accessor 接口，我们可以很容易遍历任意输入。
+
+### 函数式 Util
+
 # 业务平台
 
 # 进程外流量监控和回放
