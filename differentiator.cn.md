@@ -105,6 +105,13 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 func Handle(ctx context.Context, request MyRequestType) (response MyResponseType, err error)
 ```
 
+提供 SPI 来处理：
+* request/response的对象拷贝问题
+* 服务注册
+* 限流
+* 超时控制
+* 指标监控
+
 ### HTTP
 
 把url等输入映射到方法名上。适配HTTP框架到抽象的Server模型。
@@ -116,6 +123,41 @@ func Handle(ctx context.Context, request MyRequestType) (response MyResponseType
 ### MQ
 
 适配消息队列的topic和消息体到抽象的Server模型。
+
+## Client
+
+所有的对外RPC调用可以分为两类：
+
+* 封闭型的服务：比如特定业务的HTTP/THRIFT接口
+* 开放型服务：Redis/Mysql等。常见的做法是封装DAO，把开放型的接口封闭起来。所以最后也是变成封闭型的接口。
+
+所有的PRC调用，于是都可以抽象为
+
+```
+func Call(serviceName string, request MyRequestType) (response MyResponseType, err error)
+```
+
+提供SPI来处理：
+* request/response的对象拷贝问题
+* 服务发现/负载均衡/故障节点摘除
+* 熔断/降级
+* 指标监控
+
+### HTTP
+
+HTTP适配到抽象的Client模型
+
+### THRIFT
+
+THRIFT适配到抽象的Client模型
+
+### SQL
+
+SQL+DAO适配到抽象的Client模型
+
+### Redis
+
+Redis+DAO适配到抽象的Client模型
 
 # 业务平台
 
