@@ -187,12 +187,18 @@ tagging.Define(func(p *Product) tagging.Tags {
 
 ## Accessor 抽象
 
-把对象的遍历问题抽象成一下四类Accessor
+把对象的遍历问题抽象成以下四类Accessor
 
 * 顺序读
 * 随机读
 * 顺序写
 * 随机写
+
+主要解决的问题是
+
+* 提供类似 Java 反射的 API，避免 Go 的 reflect.Value 在运行时做过多的判断。
+* 把 JSON/THRIFT 等序列化的形式也封装成 Accessor，抽象处理所有遍历对象图的需求。
+* 给对象拷贝，验证等需求提供简化的语言抽象（屏蔽了 array/slice 等的区别）。
 
 Accessor 的 interface 定义为
 
