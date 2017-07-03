@@ -1,3 +1,8 @@
+---
+layout: default
+title: 核心竞争优势
+---
+
 * TOC
 {:toc}
 
