@@ -114,7 +114,7 @@ sharding 也不用搞得太复杂
 * 请求只会被重定向一次，避免被循环重定向
 * 每一个应用服务器既可以是“gateway”也可以是“command handler”
 
-# 如何保证视图的更新是可靠的
+# 如何保障视图的更新是可靠的
 
 我们不适用 Mysql 的 binlog 来同步视图。我们把 entity 表进行多表拆分（比如 account_001，account_002）。每一个表就类似一个 kafka partition。每一张表上的 event_id 是一个自增字段，就类似 kafka 的 offset。本质上，我们是把 Mysql 分表之后，当成 Kafka 消息队列来使用。view upder需要轮询这个事件表（也就是主存储）去同步视图。有两件事情值得注意
 
@@ -127,22 +127,15 @@ sharding 也不用搞得太复杂
 
 通过在后台每100ms运行一次view upder，我们可以保证视图的更新是不会被丢失的。然而，这种轮询模式虽然可靠，但是更新的延迟是非常大的。
 
-# 如何保证视图的更新是低延迟的
+# 如何保障视图的更新是低延迟的
 
-We allow synchronous view update directly from command handler, for latency sensitive view. 
-When a command is committed, the view update is done immediately afterwards by same worker goroutine.
-This way we can cut down the hand over time to nearly zero, there is no queue can beat this.
-However, there things to care about 
+我们允许直接从 command handler 发起对视图的同步更新，从而可以在延迟敏感的场景下实现试图的零延迟。当命令已经被提交状态已写入主存储，在同一个worker goroutine去同步更新了视图，再返回结果给调用方。这样，从调用方角度来说，视图的更新是不会有延迟的。然而，这种模式在常规地业务里用是有问题的：
 
-* update view directly from command handler means there will be concurrent updates.
-* update view might fail.
+* 多个command handler去并发更新同一个视图怎么处理，会不会写脏？
+* 更新视图的操作失败了怎么处理？
 
-The concurrent update will be handled by the optimistic lock on the view side, same as view updater retry.
-Update view might fail. We might lose update if only rely on direct update from command handler.
-Luckily, we have separate view updater working in "pull" mode to ensure integrity.
-It is just like a patch for "push" mode view update.
+对视图的并发更新，和前面讨论过的重试的问题是一样的。在更新视图失败的场景下，我们也可以依赖前面提到过的100ms的轮询更新，来保证更新不被丢失。这种模式也可以被称之为“推拉结合”的模式。可靠性靠“拉”，低延迟靠“推”。
 
-# Closing thought
+# 结语
 
-Both the main storage and views are built upon optimistic lock. 
-And sharding & queueing is a optimization to reduce the lock contention.
+主存储和视图都是构建在乐观锁上的。通过 “排队” 和 “批量” 作为优化手段来减少锁的争抢带来的性能损耗。
