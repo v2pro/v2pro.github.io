@@ -134,7 +134,7 @@ func Handle(ctx context.Context, request MyRequestType) (response MyResponseType
 所有的PRC调用，于是都可以抽象为
 
 ```
-func Call(serviceName string, request MyRequestType) (response MyResponseType, err error)
+func Call(ctx context.Context, serviceName string, methodName string, request MyRequestType) (response MyResponseType, err error)
 ```
 
 提供SPI来处理：
