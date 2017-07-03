@@ -20,33 +20,13 @@ title: 核心竞争优势
 
 基础组件就是一些Go的Library。调用的基础服务往往是开源的，比如 Mysql，Redis，Kafka这些。
 
-## Routine
+## 扩展 Go 语言自身
 
-### go()
+### main()/go 的封装
 
 所有 fork 出去的 goroutine 都需要进行包装，从而统一进行 panic 的 recover。对于常驻后台的 goroutine，提供 supervisor 的功能在 panic 之后重启。
 
-### main()
-
 主 goroutine 也需要进行包装。提供 SPI 在退出之前做一些额外操作。
-
-## Logger
-
-logger 接口提供抽象地进程对外输出“非业务” event 的能力。日志和指标是常见的两种类型的event。“非业务”主要体现在非功能性需求上：
-
-* 写event不参与事务。不能因为写event失败，使得业务操作回滚。
-* 量比较大，只保证最大努力地可靠性，在高负载下可丢弃。
-* 只写不读。业务逻辑本身不依赖于这些 event。
-
-### 日志
-
-把 logger 接口适配到现有的日志库上
-
-### 指标
-
-把 logger 接口适配到现有的metrics库上
-
-## 反射
 
 ### Accessor
 
@@ -74,6 +54,9 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 * 顺序写
 * 随机写
 
+## 实用函数
+
+
 ### Copy
 
 所有的协议编解码都可以抽象为以下几类对象的通过Accessor实现互相拷贝。当然代码里如果有对象互相拷贝的需求，深拷贝一个对象的需求，也可以使用 Copy：
@@ -89,7 +72,7 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 
 所有的参数验证都可以抽象为对象图的遍历。通过 Accessor 接口，我们可以很容易遍历任意输入。
 
-### 函数式 Util
+### 函数式编程
 
 基于Accessor接口，我们可以提供一些常见的函数式编程的便利性。
 
@@ -101,7 +84,17 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 * ...
 * linq：语言内的sql
 
-## Server 
+## 标准化 RPC
+
+### Logger
+
+logger 接口提供抽象地进程对外输出“非业务” event 的能力。日志和指标是常见的两种类型的event。“非业务”主要体现在非功能性需求上：
+
+* 写event不参与事务。不能因为写event失败，使得业务操作回滚。
+* 量比较大，只保证最大努力地可靠性，在高负载下可丢弃。
+* 只写不读。业务逻辑本身不依赖于这些 event。
+
+### Server 
 
 所有的RPC服务，都可以抽象为 `map[string]Handler`。key是方法名，value是方法的handler。Hnandler就是一个方法
 
@@ -117,19 +110,7 @@ func Handle(ctx context.Context, request MyRequestType) (response MyResponseType
 * 超时控制
 * 指标监控
 
-### HTTP
-
-把url等输入映射到方法名上。适配HTTP框架到抽象的Server模型。
-
-### THRIFT
-
-适配THRIFT框架到抽象的Server模型。
-
-### MQ
-
-适配消息队列的topic和消息体到抽象的Server模型。
-
-## Client
+### Client
 
 所有的对外RPC调用可以分为两类：
 
@@ -148,24 +129,6 @@ func Call(ctx context.Context, serviceName string, methodName string, request My
 * 服务发现/负载均衡/故障节点摘除
 * 熔断/降级
 * 指标监控
-
-### HTTP
-
-HTTP适配到抽象的Client模型
-
-### THRIFT
-
-THRIFT适配到抽象的Client模型
-
-### SQL
-
-SQL+DAO适配到抽象的Client模型
-
-### Redis
-
-Redis+DAO适配到抽象的Client模型
-
-### MQ
 
 MQ 本身也是一个同步的rpc服务。只是rpc调用的是一个通用的队列服务。从调用者角度来说，MQ其实是同步的rpc，而不是异步的。写MQ和用mysql存一个event到表里面，其实并没有本质区别。所以MQ也可以适配到抽象的Client模型。
 
