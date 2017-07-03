@@ -21,18 +21,6 @@ plz.RunApp(func() int {
 
 把main函数包装起来。返回值就是进程的exit code。提供以下两个 SPI
 
-## BeforeFinish
-
-```golang
-import "github.com/v2pro/plz/lang/app"
-
-app.BeforeFinish = append(app.BeforeFinish, func(kv []interface{}) {
-	ioutil.WriteFile("/tmp/hello", []byte("world"), os.ModeAppend|0666)
-})
-```
-
-在退出之前回调。一般用于处理一些日志刷盘的事情。
-
 ## AfterPanic
 
 ```golang
@@ -45,6 +33,18 @@ app.AfterPanic = append(app.AfterPanic, func(recovered interface{}, kv []interfa
 ```
 
 在main函数panic的时候被回调。可以在这里做一些打日志，上报指标的事情。
+
+## BeforeFinish
+
+```golang
+import "github.com/v2pro/plz/lang/app"
+
+app.BeforeFinish = append(app.BeforeFinish, func(kv []interface{}) {
+	ioutil.WriteFile("/tmp/hello", []byte("world"), os.ModeAppend|0666)
+})
+```
+
+在退出之前回调。一般用于处理一些日志刷盘的事情。如果有panic，会先调用 `AfterPanic` 再调用 `BeforeFinish`。
 
 # Routine
 
@@ -78,26 +78,6 @@ plz.GoLongRunning(func() {
 
 包装goroutine的生命周期，除了给一些默认的行为之外，更多是为了把一些 SPI 暴露出去，从而使得其他的库能够进行一些扩展（比如限制同时并发数，实现goroutine local storage）。
 
-## AfterPanic
-
-```golang
-routine.AfterPanic = append(routine.AfterPanic, func(recovered interface{}, kv []interface{}) {
-	fmt.Println("panic", recovered)
-})
-```
-
-在任何goroutine panic之后被调用。如果是`GoLongRunning`，则可能一个goroutine多次调用AfterPanic。调用者在goroutine内部。
-
-## BeforeFinish
-
-```golang
-routine.BeforeFinish = append(routine.BeforeFinish, func(kv []interface{}) {
-	fmt.Println("finished")
-})
-```
-
-在goroutine退出之前被调用。每个goroutine仅调用一次。调用者在goroutine内部。
-
 ## BeforeStart
 
 ```golang
@@ -117,6 +97,27 @@ routine.AfterStart = append(routine.AfterStart, func(kv []interface{}) {
 ```
 
 在goroutine启动之后被调用。与BeforeStart不同，调用者在goroutine内部。
+
+## AfterPanic
+
+```golang
+routine.AfterPanic = append(routine.AfterPanic, func(recovered interface{}, kv []interface{}) {
+	fmt.Println("panic", recovered)
+})
+```
+
+在任何goroutine panic之后被调用。如果是`GoLongRunning`，则可能一个goroutine多次调用AfterPanic。调用者在goroutine内部。
+
+## BeforeFinish
+
+```golang
+routine.BeforeFinish = append(routine.BeforeFinish, func(kv []interface{}) {
+	fmt.Println("finished")
+})
+```
+
+在goroutine退出之前被调用。每个goroutine仅调用一次。调用者在goroutine内部。如果有panic，会先调用 `AfterPanic` 再调用 `BeforeFinish`。
+
 
 # Tagging
 
