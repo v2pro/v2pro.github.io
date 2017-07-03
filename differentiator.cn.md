@@ -177,9 +177,9 @@ Redis+DAO适配到抽象的Client模型
 
 * 主存储：带版本的文档型存储。实质上是一个event store
 * 视图：所谓从库
-  * 详情类视图： mysql/redis/elasticsearch，各类存储。按不同的主键重新hash
-  * 统计类视图：业务指标统计
-  
+  * 详情类视图： mysql/redis/elasticsearch，各类存储。按不同的主键重新hash
+  * 统计类视图：业务指标统计
+
 核心功能
 
 * 幂等性：业务无自己实现幂等性。通过把业务逻辑托管给存储平台，实现所有command处理的自动幂等。
