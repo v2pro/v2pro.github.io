@@ -114,29 +114,20 @@ sharding 也不用搞得太复杂
 * 请求只会被重定向一次，避免被循环重定向
 * 每一个应用服务器既可以是“gateway”也可以是“command handler”
 
-# Reliable view update
+# 如何保证视图的更新是可靠的
 
-We do not use mysql binlog to synchronize view. Instead the entity table is partitioned like kafka partition.
-event_id is a auto increment big int works like kafka offset. 
-In essence, every entity table partition is a event queue.
-The view updater will scan the event table and write update to the view side. There two things to watch for
+我们不适用 Mysql 的 binlog 来同步视图。我们把 entity 表进行多表拆分（比如 account_001，account_002）。每一个表就类似一个 kafka partition。每一张表上的 event_id 是一个自增字段，就类似 kafka 的 offset。本质上，我们是把 Mysql 分表之后，当成 Kafka 消息队列来使用。view upder需要轮询这个事件表（也就是主存储）去同步视图。有两件事情值得注意
 
-* How to ensure idempotence on view update, if the synchronization is retried?
-* How to remember the last updated offset?
+* 如何保证视图更新的幂等性？比如在同步代码被重启之后，或者重试的时候？
+* 如何记住上次更新到哪里了？
 
-The updated offset can be recorded as a mysql table. Every entity table partition will have a highest sync offset.
-We batch process the update, and only update the offset record every second.
+已经被 updated offset 可以记录到一个 Mysql 表里。每张表只要记录一个最大的被同步的 event_id 就可以了。视图更新也可以批量处理，所以这个offset的写入可以一秒更新一次就行。
 
-Because the offset is not recorded in the view side with transaction, and committed on every write,
-the update to the view will be retried. We record the entity version on the view side. 
-When we update the view, we compare the event (which contains entity version) with the applied version.
-If one event has already been applied, we skip it.
+因为offset的写入不是在多表事务里的（我们也不假设视图一定是mysql的，可能是任意的存储介质），也不是在每次同步的时候都一定要提交，所以这个同步视图的操作一定会被重试。我们可以在视图侧记录一下entity的版本号。在更新试图的时候，比对要同步的改动的版本号和视图里已经应用过的最大版本号。如果这个改动已经被同步过了，则可以跳过。
 
-Having a separate view updater run in the background every 100ms, 
-we can ensure we do not lose the update on the view side.
-However, the table polling will result in high latency.
+通过在后台每100ms运行一次view upder，我们可以保证视图的更新是不会被丢失的。然而，这种轮询模式虽然可靠，但是更新的延迟是非常大的。
 
-# Low latency view update
+# 如何保证视图的更新是低延迟的
 
 We allow synchronous view update directly from command handler, for latency sensitive view. 
 When a command is committed, the view update is done immediately afterwards by same worker goroutine.
