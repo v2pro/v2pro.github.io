@@ -132,6 +132,12 @@ func Call(ctx context.Context, serviceName string, methodName string, request My
 
 MQ 本身也是一个同步的rpc服务。只是rpc调用的是一个通用的队列服务。从调用者角度来说，MQ其实是同步的rpc，而不是异步的。写MQ和用mysql存一个event到表里面，其实并没有本质区别。所以MQ也可以适配到抽象的Client模型。
 
+## 跨语言
+
+* 让 PHP 跑在 Go 上：通过 [https://github.com/taowen/go-php7](https://github.com/taowen/go-php7)
+* 让 Libc 的同步 i/o 跑在 Go 上
+* 让 PHP 所有的 c 扩展的 i/o 跑在 Go 上，从而实现 PHP 的 i/o 异步化，同时能够复用所有的 Go 的库
+
 # 微服务模板生成
 
 自身是提供RPC接口的网络服务。框架模式，业务逻辑以插件的方式托管到平台上，快速实现新的微服务。
