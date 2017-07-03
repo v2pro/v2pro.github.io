@@ -116,7 +116,7 @@ sharding 也不用搞得太复杂
 
 # 如何保障视图的更新是可靠的
 
-我们不适用 Mysql 的 binlog 来同步视图。我们把 entity 表进行多表拆分（比如 account_001，account_002）。每一个表就类似一个 kafka partition。每一张表上的 event_id 是一个自增字段，就类似 kafka 的 offset。本质上，我们是把 Mysql 分表之后，当成 Kafka 消息队列来使用。view upder需要轮询这个事件表（也就是主存储）去同步视图。有两件事情值得注意
+我们不使用 Mysql 的 binlog 来同步视图。我们把 entity 表进行多表拆分（比如 account_001，account_002）。每一个表就类似一个 kafka partition。每一张表上的 event_id 是一个自增字段，就类似 kafka 的 offset。本质上，我们是把 Mysql 分表之后，当成 Kafka 消息队列来使用。view upder需要轮询这个事件表（也就是主存储）去同步视图。有两件事情值得注意
 
 * 如何保证视图更新的幂等性？比如在同步代码被重启之后，或者重试的时候？
 * 如何记住上次更新到哪里了？
