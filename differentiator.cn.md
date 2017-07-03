@@ -56,6 +56,16 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 
 ### 函数式 Util
 
+基于Accessor接口，我们可以提供一些常见的函数式编程的便利性。
+
+* map
+* fold
+* filter
+* sort / sorted
+* to_map
+* ...
+* linq：语言内的sql
+
 # 业务平台
 
 # 进程外流量监控和回放
