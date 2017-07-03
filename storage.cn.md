@@ -72,19 +72,14 @@ CREATE TABLE `v2pro`.`account` (
 
 # 如何保障主存储的性能
 
-Mysql can not provide more than 10k tps update on same entity. We need to do something more.
-In essence, wee need to make the application server "stateful" so that we can
+这样的使用模式下，Mysql 是无法对单个 entity 的并发写入达到 10k tps的。所以我们需要做更多。本质上，我们需要让应用服务器“有状态起来”，从而可以实现：
 
-* queue on the application server instead of pushing the load to the database
-* batch on the application server, so we can write in bigger chunk for better throughput
+* 请求在应用服务器上做排队，而不是直接把压力都怼到数据库上
+* 在应用服务器上做批量，从而可以用更大块地写入来获得更好的吞吐量
 
-However, this "stateful" is just a performance optimization. We do not rely on the state to keep the logic right.
-Because we are not relying the "state" on application server, when we lost the state or we screwed up the sharding,
-data integrity will not be compromised. Everything still works if traffic not sharded, just slower.
+然而，这里的“有状态”仅仅只是做为一种性能优化手段。在业务没有高tps写入的需求的情况，甚至这种性能优化都可以先不做。我们不依赖于应用服务器的状态来保证逻辑的正确性。这是和其他的 cqrs 方案的主要区别。因为我们不依赖于应用服务器的状态，我们在sharding搞乱了情况下，或者服务器故障的情况下都很容易保障数据本身的完整性不被破坏。即便数据没有被正确分配到正确的服务器上，也仅仅是性能受到影响。
 
-So, we shard the application server, so that request to same entity always hit same application server.
-Then, we queue the requests up and batch process them. The internal queue is just a golang channel. 
-Batching is implemented by "select" on the channel.
+所以，首先我们把应用服务器做sharding，让对同一个entity的更新请求总是打到同一个应用服务器上。然后，我们把请求排队起来批量处理。内部的队列就是一个golang的channel。批量可以用 channel 的“select”来实现。
 
 ```golang
 func (worker *worker) fetchCommands() []*command {
@@ -105,22 +100,19 @@ func (worker *worker) fetchCommands() []*command {
 }
 ```
 
-The sharding is done by this simple logic:
+sharding 也不用搞得太复杂
 
-* use etcd to elect one server as the leader: this is optional, we can choose to use a static topology
-* every server keep a heart beat to the elected leader
-* when doing heart beat, leader will piggy back the latest shard allocation, every server locally cache it
-* any request can hit any server, the server will redirect it to the right shard
-* when server received a redirected request, it will handle it unconditionally
+* 有条件的，可以用etcd来选leader。如果简单情况下，静态配置拓扑也可以
+* 每个服务器和选举出的 leader 保持心跳
+* 在心跳的同时，leader把数据的分布情况回包回去。这个分布情况在内存中做缓存
+* 请求来的时候，会被重定向到正确的shard
+* 如果服务器收到一个被重定向过的请求，无论这个请求该不该它来处理，它都应该处理，而不是再次重定向
 
-The key design decisions are:
+关于组集群方面，关键的设计决策：
  
-* we only use etcd to elect a leader, we do not use it to allocate shard. 
-losing leader will not stop the traffic. only the topology is no longer the latest, 
-which might result in more lock contention.
-* request will only be redirected once, there is no harm when two servers are handling same shard, 
-only performance will be downgraded (due to optimistic lock contention)
-* every server is both "gateway" and "command handler"
+* 我们只用etcd 选举leader，而不用 etcd 记录数据分布。leader丢失不会让业务暂停，只是分布情况不再得到更新而已。最坏情况也仅仅是锁争抢导致的性能下降。
+* 请求只会被重定向一次，避免被循环重定向
+* 每一个应用服务器既可以是“gateway”也可以是“command handler”
 
 # Reliable view update
 
