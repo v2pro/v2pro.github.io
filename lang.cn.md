@@ -81,6 +81,8 @@ plz.GoLongRunning(func() {
 ## BeforeStart
 
 ```golang
+import "github.com/v2pro/plz/lang/routine"
+
 routine.BeforeStart = append(routine.BeforeStart, func(kv []interface{}) error {
 	return errors.New("can not start more goroutine")
 })
@@ -91,6 +93,8 @@ routine.BeforeStart = append(routine.BeforeStart, func(kv []interface{}) error {
 ## AfterStart
 
 ```golang
+import "github.com/v2pro/plz/lang/routine"
+
 routine.AfterStart = append(routine.AfterStart, func(kv []interface{}) {
 	fmt.Println("started")
 })
@@ -101,6 +105,8 @@ routine.AfterStart = append(routine.AfterStart, func(kv []interface{}) {
 ## AfterPanic
 
 ```golang
+import "github.com/v2pro/plz/lang/routine"
+
 routine.AfterPanic = append(routine.AfterPanic, func(recovered interface{}, kv []interface{}) {
 	fmt.Println("panic", recovered)
 })
@@ -111,6 +117,8 @@ routine.AfterPanic = append(routine.AfterPanic, func(recovered interface{}, kv [
 ## BeforeFinish
 
 ```golang
+import "github.com/v2pro/plz/lang/routine"
+
 routine.BeforeFinish = append(routine.BeforeFinish, func(kv []interface{}) {
 	fmt.Println("finished")
 })
