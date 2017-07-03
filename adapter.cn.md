@@ -1,9 +1,9 @@
 ---
 layout: default
-title: 标准化 API/SPI
+title: 标准化 RPC
 ---
 
-标准化 API/SPI
+标准化 RPC
 
 * TOC
 {:toc}
