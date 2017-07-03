@@ -184,3 +184,115 @@ tagging.Define(func(p *Product) tagging.Tags {
 ```
 
 # Accessor 
+
+## Accessor 抽象
+
+把对象的遍历问题抽象成一下四类Accessor
+
+* 顺序读
+* 随机读
+* 顺序写
+* 随机写
+
+Accessor 的 interface 定义为
+
+```golang
+type Accessor interface {
+	// === static ===
+	fmt.GoStringer
+	Kind() Kind
+	// map
+	Key() Accessor
+	// array/map
+	Elem() Accessor
+	// struct
+	NumField() int
+	Field(index int) StructField
+	// array/struct
+	RandomAccessible() bool
+
+	// === runtime ===
+	// variant
+	VariantElem(obj interface{}) (elem interface{}, elemAccessor Accessor)
+	InitVariant(obj interface{}, template interface{}) (elem interface{}, elemAccessor Accessor)
+	// map
+	IterateMap(obj interface{}, cb func(key interface{}, elem interface{}) bool)
+	FillMap(obj interface{}, cb func(filler MapFiller))
+	// array/struct
+	Index(obj interface{}, index int) (elem interface{}) // only when random accessible
+	IterateArray(obj interface{}, cb func(index int, elem interface{}) bool)
+	FillArray(obj interface{}, cb func(filler ArrayFiller))
+	// primitives
+	Skip(obj interface{}) // when the value is not needed
+	String(obj interface{}) string
+	SetString(obj interface{}, val string)
+	Bool(obj interface{}) bool
+	SetBool(obj interface{}, val bool)
+	Int(obj interface{}) int
+	SetInt(obj interface{}, val int)
+	Int8(obj interface{}) int8
+	SetInt8(obj interface{}, val int8)
+	Int16(obj interface{}) int16
+	SetInt16(obj interface{}, val int16)
+	Int32(obj interface{}) int32
+	SetInt32(obj interface{}, val int32)
+	Int64(obj interface{}) int64
+	SetInt64(obj interface{}, val int64)
+	Uint(obj interface{}) uint
+	SetUint(obj interface{}, val uint)
+	Uint8(obj interface{}) uint8
+	SetUint8(obj interface{}, val uint8)
+	Uint16(obj interface{}) uint16
+	SetUint16(obj interface{}, val uint16)
+	Uint32(obj interface{}) uint32
+	SetUint32(obj interface{}, val uint32)
+	Uint64(obj interface{}) uint64
+	SetUint64(obj interface{}, val uint64)
+	Float32(obj interface{}) float32
+	SetFloat32(obj interface{}, val float32)
+	Float64(obj interface{}) float64
+	SetFloat64(obj interface{}, val float64)
+	// pointer to memory address
+	AddressOf(obj interface{}) uintptr
+}
+```
+
+## 顺序读写的 Array
+
+* Kind() 返回 lang.Array
+* Elem() 返回数组成员的 Accessor
+* RandomAccessible() 返回 false
+* IterateArray() 支持
+* FillArray() 支持
+
+Go 的 slice/array 均封装为 Array 类型。但是 array 在 Fill 的时候受长度限制。
+
+## 随机读写的 Array
+
+* RandomAccessible() 返回 true
+* Index() 支持
+
+## 顺序读写的 Map
+
+* Kind() 返回 lang.Map
+* Key() 返回 Map key 的 Accessor
+* Elem() 返回 Map value 的 Accessor
+* RandomAccessible() 返回 false，map无需支持随机读写
+* IterateMap() 支持
+* FillMap() 支持
+
+## 顺序读写的 Struct
+
+* Kind() 返回 lang.Struct
+* NumField() 支持
+* Field() 支持
+* RandomAccessible() 返回 false
+* IterateArray() 支持
+* FillArray() 支持
+
+Struct 和 Array 是非常类似的。区别在于 Array 只有一个 Elem Accessor。而 Struct 的每个 Field 都有独自的 Accessor。
+
+## 随机读写的 Struct
+
+* RandomAccessible() 返回 true
+* Index() 支持
