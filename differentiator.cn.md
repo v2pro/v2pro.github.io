@@ -107,6 +107,7 @@ func Handle(ctx context.Context, request MyRequestType) (response MyResponseType
 
 提供 SPI 来处理：
 * request/response的对象拷贝问题
+* IDL，验证
 * 服务注册
 * 限流
 * 超时控制
@@ -139,6 +140,7 @@ func Call(ctx context.Context, serviceName string, methodName string, request My
 
 提供SPI来处理：
 * request/response的对象拷贝问题
+* IDL，验证
 * 服务发现/负载均衡/故障节点摘除
 * 熔断/降级
 * 指标监控
@@ -162,3 +164,11 @@ Redis+DAO适配到抽象的Client模型
 # 业务平台
 
 # 进程外流量监控和回放
+
+## 进程外流量监控
+
+通过内核抓包，知道哪个线程在收发哪些数据。通过数据的协议解码，知道这些数据是在做什么样的RPC调用。通过统计，实现指标监控。通过上下游tcp连接信息的串联，实现分布式trace。
+
+## 流量回放
+
+流量监控抓下来的包，可以用于在线下实现单接口的流量回放，从而部分替代单元测试，解决遗留应用不敢改的问题。结合IDL，实现流量编辑，用于测试新功能。
