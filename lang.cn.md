@@ -1,4 +1,12 @@
+---
+layout: default
+title: 扩展 Go 语言自身
+---
+
 扩展 Go 语言自身
+
+* TOC
+{:toc}
 
 # App
 
