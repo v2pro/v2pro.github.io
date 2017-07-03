@@ -126,7 +126,61 @@ routine.BeforeFinish = append(routine.BeforeFinish, func(kv []interface{}) {
 
 在goroutine退出之前被调用。每个goroutine仅调用一次。调用者在goroutine内部。如果有panic，会先调用 `AfterPanic` 再调用 `BeforeFinish`。
 
-
 # Tagging
+
+## 通过 struct 自身定义 tag
+
+```golang
+type Order struct {
+	OrderId   int `json:"order_id"`
+	ProductId int `json:"product_id"`
+}
+```
+
+这种写法是go原生支持的写法。缺点是
+
+* 都在一个字符串上，写得比较长
+* 无法支持不同上下文，提供不同的tags。比如一个字段是requird，取决于输入的来源方。
+* 不支持string之外的数据类型
+* 只能定义在 field 上，无法定义在 struct 自身，或者非 struct 的类型
+
+扩展的 `github.com/v2pro/plz/tagging` 就是为了扩展打tag的能力。给任意的 go 类型都可以打 tag。
+
+## 通过 struct method 定义 tag
+
+```golang
+import "github.com/v2pro/plz/tagging"
+
+type Order struct {
+	OrderId   int `json:"order_id"`
+	ProductId int `json:"product_id"`
+}
+
+func (order *Order) DefineTags() tagging.Tags {
+	return tagging.D(
+		tagging.S("comment", "some more info about the struct itself"),
+		tagging.F(&order.OrderId, "validation", "required", "tag_is_not_only_string", 100),
+		tagging.F(&order.ProductId, "validation", "required"),
+	)
+}
+```
+
+## 通过 tagging.Define 定义 tag
+
+```golang
+
+import "github.com/v2pro/plz/tagging"
+
+type Product struct {
+	ProductId int `json:"product_id"`
+}
+
+tagging.Define(func(p *Product) tagging.Tags {
+	return tagging.D(
+		tagging.S("comment", "some more info about the struct itself"),
+		tagging.F(&p.ProductId, "validation", "required", "tag_is_not_only_string", 100),
+	)
+})
+```
 
 # Accessor 
