@@ -3,6 +3,8 @@
 # App
 
 ```golang
+import "github.com/v2pro/plz"
+
 plz.RunApp(func() int {
 	// os.Exit(0)
 	return 0
@@ -14,6 +16,8 @@ plz.RunApp(func() int {
 ## BeforeFinish
 
 ```golang
+import "github.com/v2pro/plz/lang/app"
+
 app.BeforeFinish = append(app.BeforeFinish, func(kv []interface{}) {
 	ioutil.WriteFile("/tmp/hello", []byte("world"), os.ModeAppend|0666)
 })
@@ -24,6 +28,8 @@ app.BeforeFinish = append(app.BeforeFinish, func(kv []interface{}) {
 ## AfterPanic
 
 ```golang
+import "github.com/v2pro/plz/lang/app"
+
 app.AfterPanic = append(app.AfterPanic, func(recovered interface{}, kv []interface{}) int {
 	fmt.Println("panic", recovered)
 	return 2
