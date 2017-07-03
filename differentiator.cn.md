@@ -92,6 +92,26 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 * ...
 * linq：语言内的sql
 
+## Server 
+
+所有的RPC服务，都可以抽象为 `map[string]Handler`。key是方法名，value是方法的handler。Hnandler就是一个方法
+
+```
+func Handle(ctx context.Context, request MyRequestType) (response MyResponseType, err error)
+```
+
+### HTTP
+
+把url等输入映射到方法名上。适配HTTP框架到抽象的Server模型。
+
+### THRIFT
+
+适配THRIFT框架到抽象的Server模型。
+
+### MQ
+
+适配消息队列的topic和消息体到抽象的Server模型。
+
 # 业务平台
 
 # 进程外流量监控和回放
