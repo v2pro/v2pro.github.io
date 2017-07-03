@@ -30,9 +30,9 @@ title: 存储平台
 * 低延迟的视图更新：如果开发者需要，可以在主存储更新的实现同步更新视图，实现大部分情况下的即时可见
 * 长期稳定性：冷数据沉降这样的事情应该自动完成，不依赖额外的运维操作
 
-# Main storage correctness
+# 如何保障主存储的正确性
 
-the main storage table is defined by this sql (assuming the entity is called account)
+主存储的表结构类似这样（假设 entity 的名称叫 account，不同的 entity 创建独立的表）
 
 ```sql
 CREATE TABLE `v2pro`.`account` (
@@ -51,26 +51,26 @@ CREATE TABLE `v2pro`.`account` (
 );
 ```
 
-The process to update one entity
+更新一个 entity 的过程就是
 
-* load the old state
-* handle the request, generate response and new state
-* save the new state with version + 1
+* 加载旧的 state，并记得当时的版本
+* 处理命令，从旧的 state 计算出新的 state
+* 保存新的 state，并且在同一个SQL中要求版本号 + 1
 
-If there are concurrent update the same entity, the unique_version constraint will prevent the later one being saved.
-The user defined handler can enforce any kind of business rule to avoid state being updated to a unexpected new state.
+如果多个人同时更新同一个entity，unique_version 这个数据库约束可以阻止第二个用户保存成功。这样通过一个通用的乐观锁可以保护状态不被并发修改，而命令的处理逻辑可以任意复杂，只需要考虑串行处理的场景。
 
-Another key concern is to be idempotent. As long as the command id is same, the response should be the same.
-This is achieved by unique_command constraint. If same command being handled twice, the first response will be always used.
+另外一个关键的要求是支持幂等。只要 command id 相同，无论处理被处理多少遍，返回都应该是一样的。这个可以通过 unique_command 这个数据库约束来实现。如果同一个命令被处理了两边，我们可以总是返回第一次的结果。
 
-As long as mysql unique constraint is working properly, we are able to keep our promises.
-We do not rely on etcd to shard the traffic to corresponding application server reliably.
-We do not do any decision solely based on application server local cache.
-We do not store any persistent local state on the application server.
-We choose to keep the application server stateless, and use the good old mysql to ensure transaction safety.
-All of that is based on two unique indices.
+只要 mysql 的唯一性约束不掉链子，我们就可以实现正确性的保证。这种实现很简单
 
-# Main storage performance
+* 我们不需要担心 etcd 做流量 sharding 的时候各种故障场景
+* 我们也不依赖应用服务器的内存状态不是脏的
+* 我们也不再应用服务器本地磁盘保存任何状态
+* 我们选择把应用服务器仍然是无状态的，只依赖 Mysql 单表事务来保证并发下的正确性
+
+所有的一切，都仅仅基于两个唯一性索引。
+
+# 如何保障主存储的性能
 
 Mysql can not provide more than 10k tps update on same entity. We need to do something more.
 In essence, wee need to make the application server "stateful" so that we can
