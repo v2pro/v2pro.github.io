@@ -9,7 +9,7 @@ title: 总体架构
 * 基础组件
   * [扩展 Go 语言自身](/lang.cn.html)
   * [实用函数](/utility.cn.html)
-  * [标准化RPC](/adapter.cn.html)
+  * [标准化RPC](/adapter.cn.html)
 * 微服务模板化
   * [存储平台](/storage.cn.html)
 
