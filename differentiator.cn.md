@@ -11,6 +11,32 @@
 
 # 基础组件
 
+## Routine
+
+### go()
+
+所有 fork 出去的 goroutine 都需要进行包装，从而统一进行 panic 的 recover。对于常驻后台的 goroutine，提供 supervisor 的功能在 panic 之后重启。
+
+### main()
+
+主 goroutine 也需要进行包装。提供 SPI 在退出之前做一些额外操作。
+
+## Logger
+
+logger 接口提供抽象地进程对外输出“非业务” event 的能力。日志和指标是常见的两种类型的event。“非业务”主要体现在非功能性需求上：
+
+* 写event不参与事务。不能因为写event失败，使得业务操作回滚。
+* 量比较大，只保证最大努力地可靠性，在高负载下可丢弃。
+* 只写不读。业务逻辑本身不依赖于这些 event。
+
+### 日志
+
+把 logger 接口适配到现有的日志库上
+
+### 指标
+
+把 logger 接口适配到现有的metrics库上
+
 ## 反射
 
 ### Accessor
