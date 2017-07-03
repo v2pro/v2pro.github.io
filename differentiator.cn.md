@@ -56,7 +56,6 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 
 ## 实用函数
 
-
 ### Copy
 
 所有的协议编解码都可以抽象为以下几类对象的通过Accessor实现互相拷贝。当然代码里如果有对象互相拷贝的需求，深拷贝一个对象的需求，也可以使用 Copy：
@@ -70,7 +69,7 @@ Accessor提供的能力可分为（类似 STL 的 iterator）：
 
 ### Validate
 
-所有的参数验证都可以抽象为对象图的遍历。通过 Accessor 接口，我们可以很容易遍历任意输入。
+所有的参数验证都可以抽象为对象图的遍历。通过 Accessor 接口，我们可以很容易遍历任意输入。很大量的参数验证的代码都可以被简化掉。
 
 ### 函数式编程
 
@@ -98,7 +97,7 @@ logger 接口提供抽象地进程对外输出“非业务” event 的能力。
 
 所有的RPC服务，都可以抽象为 `map[string]Handler`。key是方法名，value是方法的handler。Hnandler就是一个方法
 
-```
+```golang
 func Handle(ctx context.Context, request MyRequestType) (response MyResponseType, err error)
 ```
 
@@ -119,7 +118,7 @@ func Handle(ctx context.Context, request MyRequestType) (response MyResponseType
 
 所有的PRC调用，于是都可以抽象为
 
-```
+```golang
 func Call(ctx context.Context, serviceName string, methodName string, request MyRequestType) (response MyResponseType, err error)
 ```
 
