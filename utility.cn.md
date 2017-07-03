@@ -17,7 +17,7 @@ title: 实用函数
 
 统一的一个api支持各种类型的编解码和对象拷贝
 
-```
+```golang
 func Copy(dst, src interface{}) error
 ```
 
