@@ -21,7 +21,15 @@ title: 实用函数
 func Copy(dst, src interface{}) error
 ```
 
-先把不同的协议用 Accessor 接口适配成对象图的遍历。然后所有的对象绑定问题都可以用 Copy 解决。
+先把不同的协议用 Accessor 接口适配成对象图的遍历。然后所有的对象绑定问题都可以用 Copy 解决。具体的 Copy 实现，由SPI提供
+
+```golang
+type Copier interface {
+	Copy(dst interface{}, src interface{}) error
+}
+
+var CopierProviders = []func(dstAccessor, srcAccessor lang.Accessor) Copier{}
+```
 
 ## HTTP Query 编解码
 
