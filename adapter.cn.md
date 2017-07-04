@@ -39,7 +39,9 @@ func handleMyRequest(ctx context.Context, req MyRequest) (MyResponse, error) {
 然后把这个handler挂到一个server上，并启动
 
 ```golang
-signal, err := srv.BuildServer("http_address", "127.0.0.1:9000").
+import "github.com/v2pro/plz"
+
+signal, err := plz.BuildServer("http_address", "127.0.0.1:9000").
 	Method("example", handleMyRequest).
 	Start()
 if err != nil {
@@ -75,6 +77,48 @@ type Server struct {
 # Client
 
 HTTP/THRIFT等RPC服务，统一适配成 client 的抽象。
+
+开发者先获取一个client，然后再用这个client进行rpc：
+
+```golang
+import "github.com/v2pro/plz"
+
+client := plz.ClientOf("douban", "index") 
+
+type MyRequest struct{} // 省略
+type MyResponse struct {} // 省略
+err := client.Call(context.TODO(), MyRequest{}, MyResponse{})
+```
+
+如果有错误，则返回error。如果正常，则结果会用 `plz.Copy` 绑定到传入的MyResponse上。
+
+具体这个 client 是什么，由 SPI 来提供。比如 http 调用，我们可以有一个简单的封装：
+
+```golang
+type httpClientAdapter struct {
+	executor HttpExecutor
+}
+
+func (adapter *httpClientAdapter) Call(ctx context.Context, req interface{}, resp interface{}) error {
+	httpReq := &http.Request{}
+	httpReq = httpReq.WithContext(ctx)
+	err := plz.Copy(httpReq, req)
+	if err != nil {
+		return err
+	}
+	httpResp, err := adapter.executor.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	err = plz.Copy(resp, httpResp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+```
+
+而 serviceName 和 methodName 是如何映射到不同的 ip:port 的 url 上的，则又交给了 executor 来实现。内部可能再有服务发现之类的 SPI 扩展点。
 
 # Logging
 
