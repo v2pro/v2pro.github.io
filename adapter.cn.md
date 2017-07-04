@@ -143,3 +143,15 @@ var Providers = []func(loggerKv []interface{}) Logger{}
 ```
 
 注册到这个 Providers 列表里，提供具体的 logger 实现。
+
+开发者使用的时候就是先获得一个logger，然后用这个logger打日志。
+
+```golang
+var requestLogger = plz.LoggerOf("logger", "request")
+
+func xxx() {
+	if requestLogger.ShouldLog(logging.LEVEL_DEBUG) {
+		requestLogger.Debug("handle request", "url", ctx.Request().URL.String())
+	}
+}
+```
