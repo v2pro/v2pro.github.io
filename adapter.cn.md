@@ -20,6 +20,58 @@ title: 标准化 RPC
 
 HTTP/THRIFT/MQ 三种服务接入方式，适配成统一的接口。
 
+开发者首先定义一个rpc方法的handler
+
+```golang
+type MyRequest struct {
+	Field string
+}
+
+type MyResponse struct {
+	Field string
+}
+
+func handleMyRequest(ctx context.Context, req MyRequest) (MyResponse, error) {
+	return MyResponse{req.Field}, nil
+}
+```
+
+然后把这个handler挂到一个server上，并启动
+
+```golang
+signal, err := srv.BuildServer("http_address", "127.0.0.1:9000").
+	Method("example", handleMyRequest).
+	Start()
+if err != nil {
+	panic(err.Error())
+}
+signal.Wait()
+```
+
+具体这个server是用什么协议启动的，请求和响应是怎么编解码的，都由 SPI 来提供。
+
+```golang
+func init() {
+	srv.Executors = append(srv.Executors, StartServer)
+}
+
+func StartServer(server *srv.Server) (srv.Notifier, error) {
+//...
+}
+```
+
+SPI 需要对传递进来的 Server 结构体进行翻译。这个结构体的定义是
+
+```golang
+type Server struct {
+	Properties map[string]interface{}
+	Methods    []map[string]interface{}
+	// sub server will map to Service concept in thrift
+	// will map to url in http
+	SubServers []*Server
+}
+```
+
 # Client
 
 HTTP/THRIFT等RPC服务，统一适配成 client 的抽象。
