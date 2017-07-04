@@ -26,4 +26,24 @@ HTTP/THRIFT等RPC服务，统一适配成 client 的抽象。
 
 # Logging
 
-提供标准化的 API/SPI 接口，适配各种现有的日志库。
+提供标准化的 API/SPI 接口，适配各种现有的日志库。给用户的接口是
+
+```golang
+func LoggerOf(loggerKv ...interface{}) Logger
+
+type Logger interface {
+	Log(level Level, msg string, kv ...interface{})
+	Error(msg string, kv ...interface{})
+	Info(msg string, kv ...interface{})
+	Debug(msg string, kv ...interface{})
+	ShouldLog(level Level) bool
+}
+```
+
+LoggerOf 的参数是 logger 自身的属性。对于 SPI 来说，根据这些属性可以区别对待不同的 logger，比如打印到不同的文件。
+
+```golang
+var Providers = []func(loggerKv []interface{}) Logger{}
+```
+
+注册到这个 Providers 列表里，提供具体的 logger 实现。
