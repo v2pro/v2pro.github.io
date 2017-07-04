@@ -136,7 +136,7 @@ type Logger interface {
 }
 ```
 
-LoggerOf 的参数是 logger 自身的属性。对于 SPI 来说，根据这些属性可以区别对待不同的 logger，比如打印到不同的文件。
+LoggerOf 的参数是 logger 自身的属性。对于 SPI 来说，根据这些属性可以区别对待不同的 logger，比如打印到不同的文件。也可以是同时发送一些指标给监控系统。对于业务逻辑代码来说，都是一样的接口。
 
 ```golang
 var Providers = []func(loggerKv []interface{}) Logger{}
