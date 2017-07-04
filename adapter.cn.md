@@ -87,7 +87,9 @@ client := plz.ClientOf("douban", "index")
 
 type MyRequest struct{} // 省略
 type MyResponse struct {} // 省略
-err := client.Call(context.TODO(), MyRequest{}, MyResponse{})
+req := MyRequest{}
+resp := MyResponse{}
+err := client.Call(context.TODO(), req, &resp)
 ```
 
 如果有错误，则返回error。如果正常，则结果会用 `plz.Copy` 绑定到传入的MyResponse上。
