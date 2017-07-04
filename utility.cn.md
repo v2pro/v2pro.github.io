@@ -15,7 +15,7 @@ title: 实用函数
 
 # 编解码
 
-统一的一个api支持各种类型的编解码和对象拷贝
+统一的一个api支持各种类型的编解码和对象拷贝。在 .net 里有一个库叫 AutoMapper，这个和它是类似的。
 
 ```golang
 func Copy(dst, src interface{}) error
