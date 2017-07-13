@@ -1,3 +1,7 @@
+# Generics implemented with Go 1.8 plugin
+
+A framework to implement generic functions
+
 # Goal
 
 We want to use a simple interface, such as 
