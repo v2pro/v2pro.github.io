@@ -76,7 +76,7 @@ func Test_max_min(t *testing.T) {
 The generics definition of a function
 
 ```golang
-
+{% raw %}
 func init() {
 	F.Dependencies["cmpSimpleValue"] = F
 }
@@ -132,6 +132,8 @@ var F = &gen.FuncTemplate{
 {{ end }}
 `,
 }
+
+{% endraw %}
 ```
 
 The function is expanded into concrete instance by `gen.Compile`:
