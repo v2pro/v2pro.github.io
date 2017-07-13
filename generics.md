@@ -14,7 +14,7 @@ func Compare(
 }
 ```
 
-The actual implementation should be concrete (generics expanded):
+So that the code can be simple, just as if we have function overloading like Java. But the actual implementation should be concrete, without reflection:
 
 ```golang
 func Compare_int(
