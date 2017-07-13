@@ -155,6 +155,7 @@ If dynamic compilation is disabled, `wombat.CompilePlugin` should be used at bui
 Generic function can call other generic function. Such as `Max` will dependend on `Compare`.
 
 ```golang
+{% raw %}
 var F = &gen.FuncTemplate{
 	Dependencies: map[string]*gen.FuncTemplate{
 		"cmpSimpleValue": cmpSimpleValue.F,
@@ -186,6 +187,7 @@ func typed_{{ .funcName }}(objs []{{ .T|name }}) {{ .T|name }} {
 	return currentMax
 }`,
 }
+{% endraw %}
 ```
 
 when we compile `Max`, `Compare` will be also compiled into same plugin.
