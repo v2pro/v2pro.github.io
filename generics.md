@@ -244,3 +244,5 @@ func typed_Max_int(objs []int) int {
 	return currentMax
 }
 ```
+
+You can notice `typed_Max_int` calls `typed_Compare_int` directly, without going through `Compare_int`, this saves the cost of `interface{}`. 
