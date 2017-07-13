@@ -149,3 +149,98 @@ func Gen(typ reflect.Type) func(interface{}, interface{}) int {
 
 If dynamic compilation is not disabled, `gen.Compile` will generate go source code, compile a plugin and load it.
 If dynamic compilation is disabled, `wombat.CompilePlugin` should be used at build time. `wombat.LoadPlugin` should be manually called in the runtime `init()`.
+
+# Dependency
+
+Generic function can call other generic function. Such as `Max` will dependend on `Compare`.
+
+```golang
+var F = &gen.FuncTemplate{
+	Dependencies: map[string]*gen.FuncTemplate{
+		"cmpSimpleValue": cmpSimpleValue.F,
+	},
+	Variables: map[string]string{
+		"T": "the type to max",
+	},
+	FuncName: `Max_{{ .T|symbol }}`,
+	Source: `
+{{ $compare := gen "cmpSimpleValue" "T" .T }}
+{{ $compare.Source }}
+func {{ .funcName }}(objs []interface{}) interface{} {
+	currentMax := objs[0].({{ .T|name }})
+	for i := 1; i < len(objs); i++ {
+		typedObj := objs[i].({{ .T|name }})
+		if typed_{{ $compare.FuncName }}(typedObj, currentMax) > 0 {
+			currentMax = typedObj
+		}
+	}
+	return currentMax
+}
+func typed_{{ .funcName }}(objs []{{ .T|name }}) {{ .T|name }} {
+	currentMax := objs[0]
+	for i := 1; i < len(objs); i++ {
+		if typed_{{ $compare.FuncName }}(objs[i], currentMax) > 0 {
+			currentMax = objs[i]
+		}
+	}
+	return currentMax
+}`,
+}
+```
+
+when we compile `Max`, `Compare` will be also compiled into same plugin.
+
+```golang
+func Gen(typ reflect.Type) func([]interface{}) interface{} {
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8:
+		funcObj := gen.Compile(F, `T`, typ)
+		return funcObj.(func([]interface{}) interface{})
+	}
+	return nil
+}
+```
+
+The actual generated source is:
+
+```golang
+func Compare_int(
+	obj1 interface{},
+	obj2 interface{}) int {
+	// end of signature
+	return typed_Compare_int(
+		obj1.(int),
+		obj2.(int))
+}
+func typed_Compare_int(
+	obj1 int,
+	obj2 int) int {
+	// end of signature
+	if (obj1 < obj2) {
+		return -1
+	} else if (obj1 == obj2) {
+		return 0
+	} else {
+		return 1
+	}
+}
+func Max_int(objs []interface{}) interface{} {
+	currentMax := objs[0].(int)
+	for i := 1; i < len(objs); i++ {
+		typedObj := objs[i].(int)
+		if typed_Compare_int(typedObj, currentMax) > 0 {
+			currentMax = typedObj
+		}
+	}
+	return currentMax
+}
+func typed_Max_int(objs []int) int {
+	currentMax := objs[0]
+	for i := 1; i < len(objs); i++ {
+		if typed_Compare_int(objs[i], currentMax) > 0 {
+			currentMax = objs[i]
+		}
+	}
+	return currentMax
+}
+```
