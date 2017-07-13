@@ -246,3 +246,20 @@ func typed_Max_int(objs []int) int {
 ```
 
 You can notice `typed_Max_int` calls `typed_Compare_int` directly, without going through `Compare_int`, this saves the cost of `interface{}`. 
+
+# Potentials
+
+With a generic function generation framework, we can build all kinds of utilities. Such as
+
+* Max/min
+* Map
+* Filter
+* Sorted
+
+More importantly, we can build a generic implementation of `Copy`:
+
+```golang
+func Copy(dst, src interface{}) error
+```
+
+It can be used to copy go objects, copy json into go object (like json.Unmarshal), copy go object into json (like json.Marshal), copy http request into your request, copy sql rows into your model. Which binding to use is a "generic function compile" time calculation, depending on the incoming dstination type and source type, we use different copy implementation, such as: https://github.com/v2pro/wombat/blob/master/cp/cpStatically/init.go 
