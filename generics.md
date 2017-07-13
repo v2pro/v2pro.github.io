@@ -270,4 +270,6 @@ More importantly, we can build a generic implementation of `Copy`:
 func Copy(dst, src interface{}) error
 ```
 
-It can be used to copy go objects, copy json into go object (like json.Unmarshal), copy go object into json (like json.Marshal), copy http request into your request, copy sql rows into your model. Which binding to use is a "generic function compile" time calculation, depending on the incoming dstination type and source type, we use different copy implementation, such as: https://github.com/v2pro/wombat/blob/master/cp/cpStatically/init.go 
+It can be used to copy go objects, copy json into go object (like json.Unmarshal), copy go object into json (like json.Marshal), copy http request into your request, copy sql rows into your model. Which binding to use is a "generic function compile" time calculation, depending on the incoming dstination type and source type, we use different copy implementation, such as: [https://github.com/v2pro/wombat/blob/master/cp/cpStatically/init.go](https://github.com/v2pro/wombat/blob/master/cp/cpStatically/init.go)
+
+Github: [https://github.com/v2pro/wombat](https://github.com/v2pro/wombat)
