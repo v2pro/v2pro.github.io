@@ -101,5 +101,70 @@ var comparePtr = generic.DefineFunc("ComparePtr(val1 T, val2 T) int").
 return {{$compare}}(*val1, *val2)`)
 ```
 
-`ByItself.ImportFunc(comparePtr)` 是为了避免循环引用自身而引入的。否则两个函数就会循环引用，导致编译失败。
+`ByItself.ImportFunc(comparePtr)` 是为了避免循环引用自身而引入的。否则两个函数就会循环引用，导致编译失败。具有了这样的函数模板化的能力，我们可以把JSON编解码这样的复杂的utility也用模板的方式写出来。
 
+# 泛型容器
+
+除了支持模板函数之外，struct也可以加模板。写法如下：
+
+```golang
+var Pair = generic.DefineStruct("Pair").
+	Source(`
+{{ $T1 := .I | method "First" | returnType }}
+{{ $T2 := .I | method "Second" | returnType }}
+
+type {{.structName}} struct {
+    first {{$T1|name}}
+    second {{$T2|name}}
+}
+
+func (pair *{{.structName}}) SetFirst(val {{$T1|name}}) {
+    pair.first = val
+}
+
+func (pair *{{.structName}}) First() {{$T1|name}} {
+    return pair.first
+}
+
+func (pair *{{.structName}}) SetSecond(val {{$T2|name}}) {
+    pair.second = val
+}
+
+func (pair *{{.structName}}) Second() {{$T2|name}} {
+    return pair.second
+}`)
+```
+
+其中固定了一个模板参数叫，I。这个是指模板struct需要实现的interface。比如，如果用`<int,string>`来展开struct，对应的interface应该是：
+
+```golang
+type IntStringPair interface {
+	First() int
+	SetFirst(val int)
+	Second() string
+	SetSecond(val string)
+}
+```
+
+使用的代码需要用这个interface来创建pair的实例：
+
+```golang
+func init() {
+	generic.DynamicCompilationEnabled = true
+}
+
+func Test_pair(t *testing.T) {
+	type IntStringPair interface {
+		First() int
+		SetFirst(val int)
+		Second() string
+		SetSecond(val string)
+	}
+	should := require.New(t)
+	intStringPairType := reflect.TypeOf(new(IntStringPair)).Elem()
+	pair := generic.New(Pair, intStringPairType).(IntStringPair)
+	should.Equal(0, pair.First())
+	pair.SetFirst(1)
+	should.Equal(1, pair.First())
+}
+```
