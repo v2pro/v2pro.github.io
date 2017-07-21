@@ -4,6 +4,8 @@
 
 # 最简单的例子
 
+定义一个泛型的函数
+
 ```golang
 var compareSimpleValue = generic.DefineFunc("CompareSimpleValue(val1 T, val2 T) int").
 	Param("T", "the type of value to compare").
@@ -16,3 +18,38 @@ if val1 < val2 {
 	return 1
 }`)
 ```
+
+测试一个泛型的函数
+
+```golang
+func init() {
+	generic.DynamicCompilationEnabled = true
+}
+
+func Test_compare_int(t *testing.T) {
+	should := require.New(t)
+	f := generic.Expand(compareSimpleValue, "T", generic.Int).
+	(func(int, int) int)
+	should.Equal(-1, f(3, 4))
+	should.Equal(0, f(3, 3))
+	should.Equal(1, f(4, 3))
+}
+```
+
+注意，在init的时候，我们开启了动态编译。这样在测试的时候，实际上是直接在执行的时候生成代码，并用plugin的方式加载的。这样测试泛型代码就能达到和反射的实现一样的高效。
+
+使用一个泛型的函数
+
+```golang
+func init() {
+	generic.Declare(compareSimpleValue, "T", generic.Int)
+}
+
+func xxx() {
+	f := generic.Expand(compareSimpleValue, "T", generic.Int).
+	(func(int, int) int)
+	f(3, 4)
+}
+```
+
+
