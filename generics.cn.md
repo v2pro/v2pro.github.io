@@ -6,6 +6,7 @@
 
 定义一个泛型的函数
 
+{% raw %}
 ```golang
 var compareSimpleValue = generic.DefineFunc("CompareSimpleValue(val1 T, val2 T) int").
 	Param("T", "the type of value to compare").
@@ -18,9 +19,11 @@ if val1 < val2 {
 	return 1
 }`)
 ```
+{% endraw %}
 
 测试一个泛型的函数
 
+{% raw %}
 ```golang
 func init() {
 	generic.DynamicCompilationEnabled = true
@@ -35,6 +38,7 @@ func Test_compare_int(t *testing.T) {
 	should.Equal(1, f(4, 3))
 }
 ```
+{% endraw %}
 
 注意，在init的时候，我们开启了动态编译。这样在测试的时候，实际上是直接在执行的时候生成代码，并用plugin的方式加载的。这样测试泛型代码就能达到和反射的实现一样的高效。
 
@@ -63,6 +67,7 @@ codegen -pkg path-to-your-pkg
 
 如果需求不仅仅是支持int，还要支持int的指针。前面实现的函数模板是无法支持的。所以我们需要能够，在泛型展开的时候进行类型判断，选择不同的实现。
 
+{% raw %}
 ```golang
 var ByItself = generic.DefineFunc("CompareByItself(val1 T, val2 T) int").
 	Param("T", "the type of value to compare").
@@ -81,6 +86,7 @@ func dispatch(typ reflect.Type) string {
 	panic("unsupported type: " + typ.String())
 }
 ```
+{% endraw %}
 
 其中dispatch就是一个go语言实现的函数，可以在展开模板的时候被调用，用于选择具体的实现。然后调用expand来把对应的模板再展开，然后调用。
 
@@ -88,6 +94,7 @@ func dispatch(typ reflect.Type) string {
 
 ComparePtr其实无法确认自己一定是调用CompareSimpleValue。因为可能还有`**int`，以及`***int`这样的情况。所以，ComparePtr在对指针进行取消引用之后，再次调用CompareByItself进行递归展开模板。
 
+{% raw %}
 ```golang
 func init() {
 	ByItself.ImportFunc(comparePtr)
@@ -100,6 +107,7 @@ var comparePtr = generic.DefineFunc("ComparePtr(val1 T, val2 T) int").
 {{ $compare := expand "CompareByItself" "T" (.T|elem) }}
 return {{$compare}}(*val1, *val2)`)
 ```
+{% endraw %}
 
 `ByItself.ImportFunc(comparePtr)` 是为了避免循环引用自身而引入的。否则两个函数就会循环引用，导致编译失败。具有了这样的函数模板化的能力，我们可以把JSON编解码这样的复杂的utility也用模板的方式写出来。
 
@@ -107,6 +115,7 @@ return {{$compare}}(*val1, *val2)`)
 
 除了支持模板函数之外，struct也可以加模板。写法如下：
 
+{% raw %}
 ```golang
 var Pair = generic.DefineStruct("Pair").
 	Source(`
@@ -134,6 +143,7 @@ func (pair *{{.structName}}) Second() {{$T2|name}} {
     return pair.second
 }`)
 ```
+{% endraw %}
 
 其中固定了一个模板参数叫，I。这个是指模板struct需要实现的interface。比如，如果用`<int,string>`来展开struct，对应的interface应该是：
 
