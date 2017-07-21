@@ -63,5 +63,43 @@ codegen -pkg path-to-your-pkg
 
 如果需求不仅仅是支持int，还要支持int的指针。前面实现的函数模板是无法支持的。所以我们需要能够，在泛型展开的时候进行类型判断，选择不同的实现。
 
+```golang
+var ByItself = generic.DefineFunc("CompareByItself(val1 T, val2 T) int").
+	Param("T", "the type of value to compare").
+	Generators("dispatch", dispatch).
+	Source(`
+{{ $compare := expand (.T|dispatch) "T" .T }}
+return {{$compare}}(val1, val2)`)
 
+func dispatch(typ reflect.Type) string {
+	switch typ.Kind() {
+	case reflect.Int:
+		return "CompareSimpleValue"
+	case reflect.Ptr:
+		return "ComparePtr"
+	}
+	panic("unsupported type: " + typ.String())
+}
+```
+
+其中dispatch就是一个go语言实现的函数，可以在展开模板的时候被调用，用于选择具体的实现。然后调用expand来把对应的模板再展开，然后调用。
+
+# 递归展开
+
+ComparePtr其实无法确认自己一定是调用CompareSimpleValue。因为可能还有`**int`，以及`***int`这样的情况。所以，ComparePtr在对指针进行取消引用之后，再次调用CompareByItself进行递归展开模板。
+
+```golang
+func init() {
+	ByItself.ImportFunc(comparePtr)
+}
+
+var comparePtr = generic.DefineFunc("ComparePtr(val1 T, val2 T) int").
+	Param("T", "the type of value to compare").
+	ImportFunc(ByItself).
+	Source(`
+{{ $compare := expand "CompareByItself" "T" (.T|elem) }}
+return {{$compare}}(*val1, *val2)`)
+```
+
+`ByItself.ImportFunc(comparePtr)` 是为了避免循环引用自身而引入的。否则两个函数就会循环引用，导致编译失败。
 
