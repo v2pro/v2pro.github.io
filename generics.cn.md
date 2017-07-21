@@ -51,5 +51,11 @@ func xxx() {
 	f(3, 4)
 }
 ```
+因为没有开启动态编译，所以调用`generic.Expand`会失败。需要用 `go install github.com/v2pro/wombat/cmd/codegen` 编译出代码生成器。然后执行
 
+```
+codegen -pkg path-to-your-pkg
+```
+
+然后会在你的包下面生成 generated.go 文件。这样运行时`generic.Expand` 就不会报错了。
 
