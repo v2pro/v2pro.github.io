@@ -40,9 +40,11 @@ func Test_compare_int(t *testing.T) {
 ```
 {% endraw %}
 
-注意，在init的时候，我们开启了动态编译。这样在测试的时候，实际上是直接在执行的时候生成代码，并用plugin的方式加载的。这样测试泛型代码就能达到和反射的实现一样的高效。
+注意，在init的时候，我们开启了动态编译。这样在测试的时候，实际上是直接在执行的时候生成代码，并用plugin的方式加载的。这样测试泛型代码就能随写随测，仿佛和用反射写的代码是一样的。实现的原理是 go 1.8 的 plugin。
 
-使用一个泛型的函数
+# 静态代码生成
+
+wombat 虽然支持动态编译，但是不推荐上生产环境，只是用于加速泛型函数开发效率的一种手段。泛型函数的用户，还是应该用静态代码生成的方式来使用。需要静态生成，就需要在使用一个泛型的函数前，先进行声明。声明在 init() 里定义哪些模板函数的哪些类型展开会被用到
 
 ```golang
 func init() {
@@ -55,13 +57,14 @@ func xxx() {
 	f(3, 4)
 }
 ```
-因为没有开启动态编译，所以调用`generic.Expand`会失败。需要用 `go install github.com/v2pro/wombat/cmd/codegen` 编译出代码生成器。然后执行
+
+用 `go install github.com/v2pro/wombat/cmd/codegen` 编译出代码生成器。然后执行
 
 ```
 codegen -pkg path-to-your-pkg
 ```
 
-然后会在你的包下面生成 generated.go 文件。这样运行时`generic.Expand` 就不会报错了。
+然后会在你的包下面生成 generated.go 文件。这样 `generic.Expand` 就会使用生成的代码了。如果使用之前少了对应的`generic.Declare`，同时又没有开启动态编译，在Expand的时候就会报错。
 
 # 泛型展开时计算
 
