@@ -181,3 +181,36 @@ func Test_pair(t *testing.T) {
 	should.Equal(1, pair.First())
 }
 ```
+
+# 类型推断
+
+前面 Pair 的例子中。这两行代码就类似类型推断
+
+```golang
+{{ $T1 := .I | method "First" | returnType }}
+{{ $T2 := .I | method "Second" | returnType }}
+```
+
+从容器的类型中取得元素的类型。
+
+模板参数支持默认取值，比如
+
+```golang
+var ByItself = generic.DefineFunc("MaxByItself(vals T) E").
+	Param("T", "array type").
+	Param("E", "array element type", func(argMap generic.ArgMap) interface{} {
+	return argMap["T"].(reflect.Type).Elem()
+}).
+	ImportFunc(compare.ByItself).
+	Source(`
+{{ $compare := expand "CompareByItself" "T" .E }}
+currentMax := vals[0]
+for i := 1; i < len(vals); i++ {
+	if {{$compare}}(vals[i], currentMax) > 0 {
+		currentMax = vals[i]
+	}
+}
+return currentMax`)
+```
+
+从 `[]int` 中提取 `int` 出来。这样泛型函数的用户使用的时候就只需要指定数组的类型，而不需要再指定元素的类型了。
