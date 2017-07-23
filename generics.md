@@ -90,6 +90,28 @@ func dispatch(typ reflect.Type) string {
 	}
 	panic("unsupported type: " + typ.String())
 }
+```
 {% endraw %}
 
 `dispatch` is just a Go function, but can be used in the template. It chooses implementation by types, then the chosen template will be expanded. `(.T|dispatch)` is syntax of `text/template`, which calls dispatch with T as argument.
+
+# Recursion
+
+ComparePtr其实无法确认自己一定是调用CompareSimpleValue。因为可能还有`**int`，以及`***int`这样的情况。所以，ComparePtr在对指针进行取消引用之后，再次调用CompareByItself进行递归展开模板。
+
+{% raw %}
+```golang
+func init() {
+	ByItself.ImportFunc(comparePtr)
+}
+
+var comparePtr = generic.DefineFunc("ComparePtr(val1 T, val2 T) int").
+	Param("T", "the type of value to compare").
+	ImportFunc(ByItself).
+	Source(`
+{{ $compare := expand "CompareByItself" "T" (.T|elem) }}
+return {{$compare}}(*val1, *val2)`)
+```
+{% endraw %}
+
+`ByItself.ImportFunc(comparePtr)` 是为了避免循环引用自身而引入的。否则两个函数就会循环引用，导致编译失败。具有了这样的函数模板化的能力，我们可以把JSON编解码这样的复杂的utility也用模板的方式写出来。
