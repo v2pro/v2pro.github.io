@@ -66,4 +66,30 @@ Then use `go install github.com/v2pro/wombat/cmd/codegen` to compile codegen. Th
 codegen -pkg path-to-your-pkg
 ```
 
-The codegen will import your package, get declarations from side effect of init(), and produce a `generated.go` file back into your package. The code will be used when `generic.Expand`. If missing corresponding `generic.Declare` and without dynamic compilation, `generic.Expand` will fail.
+The codegen will import your package, get declarations from side effect of init(), and produce a `generated.go` file back into your package. The functions defined in generated.go will be used when `generic.Expand`. If missing corresponding `generic.Declare` and without dynamic compilation, `generic.Expand` will fail.
+
+# Expand-time calculation
+
+If we need to compare more than simple value, for example supporting pointer to int. Then previous generic function can not support it, as `*int` can not be compared directly. So in the expand-time, we need to choose different implementation for different types.
+
+{% raw %}
+```golang
+var ByItself = generic.DefineFunc("CompareByItself(val1 T, val2 T) int").
+	Param("T", "the type of value to compare").
+	Generators("dispatch", dispatch).
+	Source(`
+{{ $compare := expand (.T|dispatch) "T" .T }}
+return {{$compare}}(val1, val2)`)
+
+func dispatch(typ reflect.Type) string {
+	switch typ.Kind() {
+	case reflect.Int:
+		return "CompareSimpleValue"
+	case reflect.Ptr:
+		return "ComparePtr"
+	}
+	panic("unsupported type: " + typ.String())
+}
+{% endraw %}
+
+`dispatch` is just a Go function, but can be used in the template. It chooses implementation by types, then the chosen template will be expanded. `(.T|dispatch)` is syntax of `text/template`, which calls dispatch with T as argument.
