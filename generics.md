@@ -97,7 +97,7 @@ func dispatch(typ reflect.Type) string {
 
 # Recursion
 
-ComparePtr其实无法确认自己一定是调用CompareSimpleValue。因为可能还有`**int`，以及`***int`这样的情况。所以，ComparePtr在对指针进行取消引用之后，再次调用CompareByItself进行递归展开模板。
+`ComparePtr` can not be sure, it will always call `CompareSimpleValue`, given there are cases like `**int` or `***int`. So, `ComparePtr` dereferences the pointer, and use `CompareByItself` to do recursive template expansion.
 
 {% raw %}
 ```golang
@@ -114,4 +114,105 @@ return {{$compare}}(*val1, *val2)`)
 ```
 {% endraw %}
 
-`ByItself.ImportFunc(comparePtr)` 是为了避免循环引用自身而引入的。否则两个函数就会循环引用，导致编译失败。具有了这样的函数模板化的能力，我们可以把JSON编解码这样的复杂的utility也用模板的方式写出来。
+Generic function used need to be imported by `ImportFunc`. In init() `ByItself.ImportFunc(comparePtr)` is to avoid compilation error due to cyclic dependency. With support of recursive template expansion, complex utility like JSON encoder/decoder can be written in this style.
+
+# Generic Container
+
+Besides generic function, generic struct is supported as well. The syntax is:
+
+{% raw %}
+```golang
+var Pair = generic.DefineStruct("Pair").
+	Source(`
+{{ $T1 := .I | method "First" | returnType }}
+{{ $T2 := .I | method "Second" | returnType }}
+
+type {{.structName}} struct {
+    first {{$T1|name}}
+    second {{$T2|name}}
+}
+
+func (pair *{{.structName}}) SetFirst(val {{$T1|name}}) {
+    pair.first = val
+}
+
+func (pair *{{.structName}}) First() {{$T1|name}} {
+    return pair.first
+}
+
+func (pair *{{.structName}}) SetSecond(val {{$T2|name}}) {
+    pair.second = val
+}
+
+func (pair *{{.structName}}) Second() {{$T2|name}} {
+    return pair.second
+}`)
+```
+{% endraw %}
+
+There is a fixed template parameter called I, which means the interface of the expanded struct. For example, if we expand the pair with `<int,string>`, the interface should be defined as:
+
+```golang
+type IntStringPair interface {
+	First() int
+	SetFirst(val int)
+	Second() string
+	SetSecond(val string)
+}
+```
+
+Then, we can use `IntStringPair` to create a instance of pair:
+
+```golang
+func init() {
+	generic.DynamicCompilationEnabled = true
+}
+
+func Test_pair(t *testing.T) {
+	type IntStringPair interface {
+		First() int
+		SetFirst(val int)
+		Second() string
+		SetSecond(val string)
+	}
+	should := require.New(t)
+	intStringPairType := reflect.TypeOf(new(IntStringPair)).Elem()
+	pair := generic.New(Pair, intStringPairType).(IntStringPair)
+	should.Equal(0, pair.First())
+	pair.SetFirst(1)
+	should.Equal(1, pair.First())
+}
+```
+
+# Type Inference
+
+In previous example, we have two lines of code:
+
+```golang
+{{ $T1 := .I | method "First" | returnType }}
+{{ $T2 := .I | method "Second" | returnType }}
+```
+
+to get element types from its container type.
+
+Template parameters support default value, for example:
+
+```golang
+var ByItself = generic.DefineFunc("MaxByItself(vals T) E").
+	Param("T", "array type").
+	Param("E", "array element type", func(argMap generic.ArgMap) interface{} {
+	return argMap["T"].(reflect.Type).Elem()
+}).
+	ImportFunc(compare.ByItself).
+	Source(`
+{{ $compare := expand "CompareByItself" "T" .E }}
+currentMax := vals[0]
+for i := 1; i < len(vals); i++ {
+	if {{$compare}}(vals[i], currentMax) > 0 {
+		currentMax = vals[i]
+	}
+}
+return currentMax`)
+```
+
+By getting `int` from `[]int`,the user of the generic function, only need to specify its container type, the element type is "infered".
