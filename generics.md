@@ -188,15 +188,18 @@ func Test_pair(t *testing.T) {
 
 In previous example, we have two lines of code:
 
+{% raw %}
 ```golang
 {{ $T1 := .I | method "First" | returnType }}
 {{ $T2 := .I | method "Second" | returnType }}
 ```
+{% endraw %}
 
 to get element types from its container type.
 
 Template parameters support default value, for example:
 
+{% raw %}
 ```golang
 var ByItself = generic.DefineFunc("MaxByItself(vals T) E").
 	Param("T", "array type").
@@ -214,5 +217,6 @@ for i := 1; i < len(vals); i++ {
 }
 return currentMax`)
 ```
+{% endraw %}
 
 By getting `int` from `[]int`,the user of the generic function, only need to specify its container type, the element type is "infered".
