@@ -28,32 +28,6 @@ title: 核心竞争优势
 
 主 goroutine 也需要进行包装。提供 SPI 在退出之前做一些额外操作。
 
-### Accessor
-
-把对象分为以下几类：
-
-* 简单值
-* Struct
-* Map
-* Array
-* Variant
-
-提供抽象的反射接口对这些对象进行读和写。这些对象底层可以是
-
-* go 语言的对象
-* http request/response
-* json []byte
-* thrift []byte
-* mysql protocol []byte
-* redis protocol []byte
-
-Accessor提供的能力可分为（类似 STL 的 iterator）：
-
-* 顺序读
-* 随机读
-* 顺序写
-* 随机写
-
 ## 实用函数
 
 ### Copy
