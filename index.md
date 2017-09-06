@@ -3,6 +3,10 @@ layout: default
 title: 总体架构
 ---
 
+# V2PRO 
+
+探索专业化的业务软件开发之道
+
 ![v2pro architecture](https://docs.google.com/drawings/d/e/2PACX-1vR4gK59DB8KuNP_5CmrZJrGkjkeaYukA1T-bKRSVqDfe3HuYZ2XqW7UG6EFD4dRCpUEHXkG1Pdimal7/pub?w=1084&h=422)
 
 # 微服务模板化
