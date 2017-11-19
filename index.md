@@ -20,6 +20,8 @@ title: 总体架构
 
 # 效率提升工具
 
+![v2pro](https://docs.google.com/drawings/d/e/2PACX-1vRT5h9AVqantCAi01hdSZkJ3u_YSrtUZKOox2jj_YQEnDdvr4-DtC0xB-v4CSpsrMZsGz3xNthuk3vX/pub?w=507&h=296)
+
 用创新实现开发效率提升。
 
 * 基于流量录制和回放的单元测试解决方案
