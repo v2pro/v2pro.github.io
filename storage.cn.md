@@ -189,7 +189,7 @@ func (obj *DObject) Set(key interface{}, value interface{}) {
 
 但是部分更新的key怎么知道呢？总不能每次改动的时候都通知父对象去标记吧。这样还要维护父子关系。解决办法是在最终序列化delta的时候去询问每个key是不是dirty了，如果dirty，则父对象把这个key设置到部分更新了的key的map里。
 
-```json
+```go
 func (obj *DObject) calcPatched() map[string]interface{} {
 	if obj.patched != nil {
 		return obj.patched
