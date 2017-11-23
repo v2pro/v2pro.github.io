@@ -207,7 +207,39 @@ func (obj *DObject) calcPatched() map[string]interface{} {
 }
 ```
 
+解决了跟踪改动的问题之后，又带来了严重的开发体验问题。如果让开发者不能写 `obj["key"]="value"`，而一定要 `obj.Set("key", "value")`，这样的体验是非常糟糕的。而 go 又不向 javascript 一样可以加各种各样的钩子来解决这个问题。解决办法就是不用 go 来写 command handler，而是用 javascript 来写 command handler。通过把 javascript 里的 `obj["key"]="value"` 翻译成对应的 go 源码 `AsObj(obj).Set("key", "value")`，来解决开发体验的问题。
 
+下一个要解决的问题是有了这样的delta之后，如何增量更新呢？如果需要从一个 `[]byte` 叠加到另外一个 `[]byte`，这样会带来非常多的开销。解决办法是delta直接流式地读出来，每读一点就应用一点到内存里的doc上（一个对象图）。如果要从头实现这样一个 JSON 读取过程还是很浩大的工作量的。我们通过 json-iterator 的可扩展性，复用了现有的json解析器。把 delta 的增量应用问题，等价成了一个定制化的 JSON 反序列化过程。
+
+示意代码如下 
+
+```go
+func (decoder *objectDeltaDecoder) Decode(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
+	obj := (*DObject)(ptr)
+	iter.ReadMapCB(func(iter *jsoniter.Iterator, field string) bool {
+		switch field {
+		case "u":
+			iter.ReadMapCB(func(iter *jsoniter.Iterator, field string) bool {
+				input := iter.SkipAndReturnBytes()
+				subIter := Json.BorrowIterator(input) // switch from DeltaJson to Json
+				defer Json.ReturnIterator(subIter)
+				obj.data[field] = subIter.Read()
+				return true
+			})
+		case "p":
+			iter.ReadMapCB(func(iter *jsoniter.Iterator, field string) bool {
+				fieldValue := obj.data[field]
+				iter.ReadVal(&fieldValue)
+				obj.data[field] = fieldValue
+				return true
+			})
+		default:
+			iter.Skip()
+		}
+		return true
+	})
+}
+```
 
 # 如果提供RPC幂等性
 
