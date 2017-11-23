@@ -29,7 +29,49 @@ title: 文档数据库
 
 # 总体设计
 
-[!aritecture](https://docs.google.com/drawings/d/e/2PACX-1vScYQzqv2-cINbIloWrm7G9A88cTWFcdtaUABKvBf8fiUyFPmRd5AblIhwceuv1L85_5uWmKylVwZ13/pub?w=888&h=870)
+![aritecture](https://docs.google.com/drawings/d/e/2PACX-1vScYQzqv2-cINbIloWrm7G9A88cTWFcdtaUABKvBf8fiUyFPmRd5AblIhwceuv1L85_5uWmKylVwZ13/pub?w=888&h=870)
+
+总体分为两层：
+
+* kvstore：一个由mysql实现的kv存储。api设计上来说支持普通的点读，和正向反向的scan。对于主键冲突的情况，数据库可以明确阻止写入，并返回对应的错误。
+* docstore：实现文档数据库的业务逻辑。自身没有任何持久化的状态，只在内存中做一些缓存，用于提高速度。数据的可靠性和冲突检测完全依赖kvstore。
+
+分为以下概念：
+
+* entity：一个有id的实体。文档数据读写的就是entity。
+* entity id：全局唯一的id，格式为字符串，由调用方生成
+* entity version：实体的版本号，单调递增，从1开始
+* entity type：对entity的分类，不同类型的entity支持的command不同。
+* command type：读写entity的操作名
+* command handler：由 entity type 和 command type 可以映射到一个具体的操作的实现
+* command id：一次读写操作的全局唯一id，由调用方生成。相同的command id代表这个操作被重试了。数据库要能够对同样的command id进行幂等的处理，返回完全相同的response。
+* command request：读写操作的正文，格式为 JSON，可以有任意的字段
+* state：entity的状态，格式为 JSON，可以有任意的字段
+* delta：当前版本的entity状态相对上一个版本的增量，格式为 Delta JSON。
+* doc：文档对象，entity当前状态在内存中的表示。是command操作的目标。
+* command response：读写操作返回给调用方的结果。
+* event：一次读写操作产生的副作用的记录，做为一条记录插入到kvstore里。包括两部分，一部分是command response。另外一部分是对entity的修改，体现为一个新的state，或者是一个delta。
+
+一次写入操作的过程
+
+* 根据entity id进行hash，获得对应的partition，判断是不是当前服务器负责的。如果不是，则转发。
+* docstore从kvstore里加载entity的最新的版本，也就是一条event。如果取得的event上有state，则直接读取到了。
+* 如果event上没有state，只有delta，则向前搜索之前的event，直到取到一条event包含state为止
+* 把state，叠加其后的所有delta得到一个完整的doc对象
+* 根据event type和command type取得command handler，传入doc对象和command request进行执行
+* command handler直接对doc进行修改，并最终返回command response
+* doc自身记录了所有改动，要么直接序列化doc为state，要么把doc上的改动序列化成delta。
+* 生成一条event，并插入到kvstore。如果没有冲突，则继续
+* 如果event产生了冲突，说明发生了未符合预期的并发写入。刷新集群拓扑，从头开始整个过程。
+
+整个数据库对外提供的主动可调用的api是两个
+
+* exec：写操作，保证一致性。传入event type, command type, entity id等信息
+* query：读操作，不保证读取到是最新的。传入event type, command type, entity id。query操作不能对doc进行修改，否则会报错。query 可以用于读取state中的部分值，或者做一些视图计算逻辑。如果需要保证读取的数据是最新的，使用exec进行读操作，这样每次读操作也会产生一条event。query主要的用途是提高读取的性能，因为可以使用非master来进行响应。默认支持的command type是"get"，读一个entity的整个state。
+
+数据库同时提供视图同步能力，由外部注册handler。
+
+TODO
 
 # 如何保障并发写入下的正确性
 
