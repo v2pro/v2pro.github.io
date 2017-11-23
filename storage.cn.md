@@ -85,6 +85,26 @@ TODO：定义视图同步的spi
 * 开发效率：数据模型可以是任意的JSON对象，而不用建模成关系模型。业务代码可以直接用javascript来写，而不用翻译成sql。相比其他的cqrs解决方案，不需要业务代码里出现event/command等字眼，写逻辑的时候就是对普通的对象的直接读写。doc跟踪自身的改动，自动生成event。
 * 保证性能：采用乐观锁的模型，但是进程之间进行主从的协调，减少锁冲突的概率。同时利用内存中的doc对象缓存，避免读取数据库和反序列化的成本。正常情况下，一个写操作的成本是 JSON 序列化加上一次 mysql insert。虽然 JSON 确实是一个性能堪忧的格式，但是序列化的速度相对于反序列化来说要快得多。
 
+然后我们来讨论正确性
+
+* 最根本得正确性保证是kvstore使用 `entity_id+entity_version` 做为主键。这样可以保证一个entity的一个版本只会有一个插入成功。
+* 读取event的时候，得知base的version。command执行完之后，写入的时候用base version+1。如果同时有另外一个线程或者进程已经写入成功了，base version+1就一定会产生主键冲突的错误。
+* 一些内存中的缓存（比如entity id对应一个内存中的doc对象，避免每次写入都重新读取）的更新无法保证和kvstore的更新是原子发生的。所以在一个进程内，对同一个entity的操作只能在一个线程内串行发生。这样就可以保证进程内不会产生并发的冲突问题，从而在kvstore写入之后，再进行内存缓存的刷新即可。
+
+关于kvstore的主键rowkey的选择
+
+* entity id是定长的全局唯一的字符串
+* entity version是一个uint64
+* 需要保证rowkey对于同一个entity id来说，version增长等价于rowkey的增长。也就是我们可以通过正向的rowkey scan获得更新的entity版本。同时在scan的过程中必须读到的是同一个entity的数据，不会插入其他entity的event。同时scan到最末尾可以知道这个entity没有更多的版本了。
+* 需要支持迅速获得某个entity的最高版本。如果通过正向scan来做，这个操作的代价就会随着entity的版本数的增长而增长，这样是不可以接受的。需要kvstore支持逆向的scan，从而可以从尾部开始读取。
+* rowkey自身用字母表的顺序排序，把entity id和version是拼成一个字符串来处理的
+* 为了方便debug时的查看数据，要求rowkey都是printable的ascii，不能直接用big endian来表示uint64
+* 在以上的约束下，rowkey的设计是 `[entity id]_[entity version big endian hex]`
+
+比如 entity id 是 asdxcv，entity version是1024，那么对应的rowkey就是 `asdxcv_0000000000000400`
+
+再比如 entity id 是 jixcfe, entity version 是971，那么对应的rowkey就是 `jixcfe_00000000000003cb`
+
 # 如何解决写入放大问题
 
 TODO
