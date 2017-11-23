@@ -162,7 +162,52 @@ CREATE TABLE event_912 (
 {"leaf":{"hello":"world","origKey":"origValue"}}
 ```
 
-TODO
+接下来的问题是，如何产生前面这样的 delta 格式呢？如果要让开发者手工维护这个 delta，肯定会被人骂死，因为代码写起来太别扭了。做一个修改不能直接去改变量，而是先产生一个所谓的 event，然后再 apply 这个 event（大部分的 cqrs 方案就是这么要求开发者的），是非常反人类的。
+
+解决的办法是让开发者直接修改对象，而对象自己来跟踪自己属性的变化，这个和前端领域的 mvvm 的方案是一样的。我们定义这样的 struct 来代表 `map[string]interface{}`
+
+```go
+type DObject struct {
+	data    map[string]interface{} // 实际的数据
+	updated map[string]interface{} // 更新的key
+	patched map[string]interface{} // 部分更新的key
+	removed map[string]interface{} // 删除了的key
+}
+```
+
+然后在 set 的时候去捕捉改动
+
+```go
+func (obj *DObject) Set(key interface{}, value interface{}) {
+	obj.data[key.(string)] = value
+	if obj.updated == nil {
+		obj.updated = map[string]interface{}{}
+	}
+	obj.updated[key.(string)] = value
+}
+```
+
+但是部分更新的key怎么知道呢？总不能每次改动的时候都通知父对象去标记吧。这样还要维护父子关系。解决办法是在最终序列化delta的时候去询问每个key是不是dirty了，如果dirty，则父对象把这个key设置到部分更新了的key的map里。
+
+```json
+func (obj *DObject) calcPatched() map[string]interface{} {
+	if obj.patched != nil {
+		return obj.patched
+	}
+	obj.patched = map[string]interface{}{}
+	for k, v := range obj.data {
+		switch typedValue := v.(type) {
+		case *DObject:
+			if typedValue.isDirty() {
+				obj.patched[k] = typedValue
+			}
+		}
+	}
+	return obj.patched
+}
+```
+
+
 
 # 如果提供RPC幂等性
 
