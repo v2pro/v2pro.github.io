@@ -106,7 +106,9 @@ TODO：定义视图同步的spi
 
 再比如 entity id 是 jixcfe, entity version 是971，那么对应的rowkey就是 `jixcfe_00000000000003cb`
 
-实际的kvstore是用mysql来模拟的。因为在大部分公司的运维水平下，mysql是唯一可以做可靠主存储的物理介质。分表为997个，以支持水平扩展。建表的 SQL 是
+实际的kvstore是用mysql来模拟的。因为在大部分公司的运维水平下，mysql是唯一可以做可靠主存储的物理介质。但是这样的rowkey设计做为mysql的clustered index会到来碎片化的问题。所以性能更优的方案还是用一个性能更高，更优化的kvstore。因为整个docstore对kvstore的要求已经约束为get/set/scan/reverseScan这四个操作，所以可替换的kvstore还是非常多。
+
+分表为997个，以支持水平扩展。建表的 SQL 是
 
 ```sql
 CREATE TABLE event_912 (
