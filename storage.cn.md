@@ -105,6 +105,24 @@ TODO：定义视图同步的spi
 
 再比如 entity id 是 jixcfe, entity version 是971，那么对应的rowkey就是 `jixcfe_00000000000003cb`
 
+实际的kvstore是用mysql来模拟的。因为在大部分公司的运维水平下，mysql是唯一可以做可靠主存储的物理介质。分表为997个，以支持水平扩展。建表的 SQL 是
+
+```sql
+CREATE TABLE event_912 (
+  `rowkey`     CHAR(29)       NOT NULL,
+  `entity_id`    CHAR(12)     NOT NULL,
+  `entity_version`      BIGINT       NOT NULL,
+  `command_id`   VARCHAR(256) NOT NULL,
+  `command_name` VARCHAR(256) NOT NULL,
+  `command_request`      TEXT         NOT NULL,
+  `command_response`     TEXT         NOT NULL,
+  `state`        TEXT        NULL,
+  `delta`        TEXT        NULL,
+  `committed_at` DATETIME     NOT NULL       DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`rowkey`)
+);
+```
+
 # 如何解决写入放大问题
 
 TODO
