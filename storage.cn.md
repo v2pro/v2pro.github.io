@@ -123,6 +123,8 @@ CREATE TABLE event_912 (
 );
 ```
 
+997个mysql表实际上就是把一个完整的队列，切分成997段进行了存储。event表除了支持kv读写之外，还可以用于扫描一个entity的一段时间内的改动，进行数据的复制同步。起到类似kafka队列，或者mysql binlog的作用。
+
 # 如何解决写入放大问题
 
 TODO
