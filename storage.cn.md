@@ -130,6 +130,38 @@ CREATE TABLE event_912 (
 
 # 如何解决写入放大问题
 
+存储JSON的一个大问题是JSON表示本身就很大。而且无论每次改动有多么少，都需要重新存储一份完整的JSON会数倍数十倍的放大写入量。这个就完全取决于JSON本身的大小了。如果业务上一个entity本身非常巨大，就会使得写入的效率很低。
+
+为了解决尺寸的问题，可以尝试用短的JSON KEY，或者干脆用类似protobuf/thrift的int表示field的模式，或者用LZ4压缩。但是这些都无法根本上改变“写入放大的现象”。要根除问题，还是要实现一次改动了多少，就保存多少，而不是每次都全量写入整个JSON。为了达到这个目的，需要解决以下问题：
+
+* delta的格式如何定义
+* 如何知道一次操作产生了什么样的delta
+* 如何应用delta，进行增量更新
+
+首先来看第一个问题，delta的格式
+
+```json
+{"__patched__":{"leaf":{"__updated__":{"hello":"world"}}}}
+```
+
+我们定义如下的delta格式：
+
+* `__updated__`: 代表object或者array的key被完全更新
+* `__patched__`：代表object或者array的key被部分更新，具体更新了什么，由同样的delta json格式嵌套表达
+* `__removed__`：代表object或者array的key被删除
+
+对于这样的 JSON 
+
+```json
+{"leaf":{"origKey":"origValue"}}
+```
+
+应用前面的 delta 得到的结果是
+
+```json
+{"leaf":{"hello":"world","origKey":"origValue"}}
+```
+
 TODO
 
 # 如果提供RPC幂等性
