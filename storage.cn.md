@@ -241,6 +241,8 @@ func (decoder *objectDeltaDecoder) Decode(ptr unsafe.Pointer, iter *jsoniter.Ite
 }
 ```
 
+这个patch应用的过程并不是特别的快。但是常态下docstore也不应该从kvstore里去读取entity，而是缓存在自己的内存中。因为docstore本身进行了hash和主从的集群协调，每个docstore只需要负责自己对应的entity，这个缓存的效率还是非常高的。所以JSON反序列的成本，delta的增量应用成本不会是性能的瓶颈。
+
 # 如果提供RPC幂等性
 
 TODO
