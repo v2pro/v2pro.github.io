@@ -141,14 +141,14 @@ CREATE TABLE event_912 (
 首先来看第一个问题，delta的格式
 
 ```json
-{"__patched__":{"leaf":{"__updated__":{"hello":"world"}}}}
+{"p":{"leaf":{"u":{"hello":"world"}}}}
 ```
 
 我们定义如下的delta格式：
 
-* `__updated__`: 代表object或者array的key被完全更新
-* `__patched__`：代表object或者array的key被部分更新，具体更新了什么，由同样的delta json格式嵌套表达
-* `__removed__`：代表object或者array的key被删除
+* `u`: updated，代表object或者array的key被完全更新
+* `p`：patched，代表object或者array的key被部分更新，具体更新了什么，由同样的delta json格式嵌套表达
+* `r`：removed，代表object或者array的key被删除
 
 对于这样的 JSON 
 
