@@ -245,7 +245,7 @@ func (decoder *objectDeltaDecoder) Decode(ptr unsafe.Pointer, iter *jsoniter.Ite
 
 # 如果提供RPC幂等性
 
-TODO
+如果同一个操作被重试了会怎样？比如给用户转账，我们显然不希望每重试一次，就转账一次。所有网络上暴露的RPC操作都应该是幂等的，否则对端就无法进行重试。也就是对于相同的command id，无论执行多少次，返回的 response 应该是一样的，同时对 entity 的状态修改只做一次。
 
 # 如何保障视图的更新是可靠的
 
