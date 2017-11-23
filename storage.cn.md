@@ -109,16 +109,16 @@ TODO：定义视图同步的spi
 
 ```sql
 CREATE TABLE event_912 (
-  `rowkey`     CHAR(29)       NOT NULL,
-  `entity_id`    CHAR(12)     NOT NULL,
-  `entity_version`      BIGINT       NOT NULL,
-  `command_id`   VARCHAR(256) NOT NULL,
-  `command_name` VARCHAR(256) NOT NULL,
-  `command_request`      TEXT         NOT NULL,
-  `command_response`     TEXT         NOT NULL,
-  `state`        TEXT        NULL,
-  `delta`        TEXT        NULL,
-  `committed_at` DATETIME     NOT NULL       DEFAULT CURRENT_TIMESTAMP,
+  `rowkey`           CHAR(29)     NOT NULL, --12+16+1
+  `entity_id`        CHAR(12)     NOT NULL,
+  `entity_version`   BIGINT       NOT NULL,
+  `command_id`       CHAR(12)     NOT NULL,
+  `command_name`     VARCHAR(256) NOT NULL,
+  `command_request`  TEXT         NOT NULL,
+  `command_response` TEXT         NOT NULL,
+  `state`            TEXT         NULL,
+  `delta`            TEXT         NULL,
+  `committed_at`     DATETIME     NOT NULL       DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`rowkey`)
 );
 ```
