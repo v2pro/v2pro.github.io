@@ -85,33 +85,11 @@ title: 创新的主存储方案
 
 entity lookup其实就是用entity id维度建立了event历史的二级索引。所以必然会有一个更新不及时，导致不一致的问题。
 
-这里有两个key，一个是entity id对应last event id的key。但是如果仅仅读这个key并不能知道是不是最新的。还需要先校验一下这个partition的entity id=>event id的映射同步到哪里了，也就是最后同步的last event id，即entity lookup的版本号。如果entity lookup的版本小于当前partition的版本。则报错，因为entity id=>event id没有及时同步，无法加载entity的状态。
+entity lookup也是和event的kvstore一样，分partition的。每个entity lookup partition都有一个版本号，记录了最后更新到的last event id。读取entity lookup之前先读一下这个版本号就可以知道，这个partition的数据是不是及时更新了。如果有滞后，则报错，说明这个时候因为无法加载entity从而无法处理请求。一般来说最近刚写入的entity是缓存在内存里的，就不会从kvstore上去读。所以entity lookup更新稍微滞后一点是没有关系的。
 
-整个数据库对外提供的主动可调用的api是两个
+另外一个可能照成entity lookup不一致的情况是docstore刚完成了主的切换。前一个主还在刷新自己的状态到entity lookup，后面切换上来的主已经开始往entity lookup了。这个时候就可能照成一个entity id对应的event id刚被写入就被覆盖了。为了应对这种情况。entity lookup在写入的时候需要保证值是递增的，如果新值小于现值就丢弃。
 
-* exec：写操作，保证一致性。传入event type, command type, entity id等信息
-* query：读操作，不保证读取到是最新的。传入event type, command type, entity id。query操作不能对doc进行修改，否则会报错。query 可以用于读取state中的部分值，或者做一些视图计算逻辑。如果需要保证读取的数据是最新的，使用exec进行读操作，这样每次读操作也会产生一条event。query主要的用途是提高读取的性能，因为可以使用非master来进行响应。默认支持的command type是"get"，读一个entity的整个state。
-
-数据库同时提供视图同步能力，由外部注册handler。
-
-TODO：定义视图同步的spi
-
-正确性是首先需要保证的。因为整个handler执行都是在内存中进行的，handler执行的过程中，底层的状态就由可能被其他的线程或者进程提前修改了。要回答这个问题，首先要了解为什么需要这样的数据库。
-
-* 传统的并发保障是由数据库保证的，让业务把操作下推到数据库内部来进行，比如写成SQL。这种做法的问题是SQL的表达力是有限的，无法做很复杂的业务判断。
-* 如果不想把整个操作下推到数据库内完成，另外一个常见的选择是在业务层做大部分的计算。然后在数据库层面实现一个悲观锁（读取时就上锁），或者乐观锁（写入时检查base版本是否变化）。但是在并发比较高的情况下，由于业务的application server之间缺少协调（分区选主），乐观锁冲突会严重限制写入的tps。
-
-所以我们的目标是最大化开发效率，同时保证性能。
-
-* 开发效率：数据模型可以是任意的JSON对象，而不用建模成关系模型。业务代码可以直接用javascript来写，而不用翻译成sql。相比其他的cqrs解决方案，不需要业务代码里出现event/command等字眼，写逻辑的时候就是对普通的对象的直接读写。doc跟踪自身的改动，自动生成event。
-* 保证性能：采用乐观锁的模型，但是进程之间进行主从的协调，减少锁冲突的概率。同时利用内存中的doc对象缓存，避免读取数据库和反序列化的成本。正常情况下，一个写操作的成本是 JSON 序列化加上一次 mysql insert。虽然 JSON 确实是一个性能堪忧的格式，但是序列化的速度相对于反序列化来说要快得多。
-
-然后我们来讨论正确性
-
-* 最根本得正确性保证是kvstore使用递增的 `event_id` 做为主键。这样可以保证一个分区的数据是顺序更新的。
-* 读取event的时候，得知当前partition的最大`event_id`。command执行完之后，写入的时候用之前的event id +1。如果同时有另外一个线程或者进程已经写入成功了，event id+1就一定会产生主键冲突的错误。
-* 一些内存中的缓存（比如entity id对应一个内存中的doc对象，避免每次写入都重新读取）的更新无法保证和kvstore的更新是原子发生的。所以在一个进程内，对同一个entity的操作只能在一个线程内串行发生。这样就可以保证进程内不会产生并发的冲突问题，从而在kvstore写入之后，再进行内存缓存的刷新即可。
-* docstore的集群并不单独进行选主的过程。初始的主从手工指定。当主挂了之后，其他的从在代理请求失败的之后，自动默认自己是主。只要event提交成功，就认为自己已经是主了，然后更新集群拓扑到kvstore里。在主从切换的瞬间，会有多个从同时尝试切为主，这个时候如果对一个partition有并发的写入，那么就会产生乐观锁冲突，会短暂下降写入性能。主再更新了之后，根据更新的时间戳，一段时间内不再重复切换，避免来回反复切。docstore的负载均衡性人工干预调整。
+# MySQL表结构
 
 实际的kvstore是用mysql来模拟的。因为在大部分公司的运维水平下，mysql是唯一可以做可靠主存储的物理介质。
 
