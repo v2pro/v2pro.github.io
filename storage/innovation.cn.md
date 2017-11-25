@@ -27,7 +27,7 @@ title: 创新的主存储方案
   * 保证最终一致性：能够保证数据同步到任意异构数据库之后的不重不丢。不依赖对端数据库提供特殊支持。
   * 极低延迟的同步：通过推拉结合的方式保证在正常情况下，数据同步的速度要高于通过kafka等消息队列复制的速度。降低业务层为了支持最终一致性引起的容错成本。
   
-# 技术选型
+# 总体设计
 
 为了支撑以上目标，实现上的几个核心技术选型：
 
@@ -39,8 +39,6 @@ title: 创新的主存储方案
 * 利用保存的历史event做为并发问题的解决方案，同时代替了MySQL binlog做为数据同步的数据源
 
 ![architecture](https://docs.google.com/drawings/d/e/2PACX-1vScYQzqv2-cINbIloWrm7G9A88cTWFcdtaUABKvBf8fiUyFPmRd5AblIhwceuv1L85_5uWmKylVwZ13/pub?w=885&h=686)
-
-# 总体设计
 
 总体分为两层：
 
@@ -63,6 +61,10 @@ title: 创新的主存储方案
 * command response：读写操作返回给调用方的结果。
 * event：一次读写操作产生的副作用的记录，做为一条记录插入到kvstore里。包括两部分，一部分是command response。另外一部分是对entity的修改，体现为一个新的state，或者是一个delta。
 
+# 如何保障并发写入下的正确性
+
+![process](https://go.gliffy.com/go/share/image/sudta8m6xkde7e8g9t3o.png?utm_medium=live-embed&utm_source=custom)
+
 一次写入操作的过程
 
 * 根据entity id进行hash，获得对应的partition，判断是不是当前服务器负责的。如果不是，则转发。
@@ -83,8 +85,6 @@ title: 创新的主存储方案
 数据库同时提供视图同步能力，由外部注册handler。
 
 TODO：定义视图同步的spi
-
-# 如何保障并发写入下的正确性
 
 正确性是首先需要保证的。因为整个handler执行都是在内存中进行的，handler执行的过程中，底层的状态就由可能被其他的线程或者进程提前修改了。要回答这个问题，首先要了解为什么需要这样的数据库。
 
