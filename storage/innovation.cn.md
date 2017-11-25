@@ -38,7 +38,7 @@ title: 创新的主存储方案
 * 不额外用zookeeper之类的东西进行选主，把变更日志无冲突写入就算抢到了主
 * 利用保存的历史event做为并发问题的解决方案，同时代替了MySQL binlog做为数据同步的数据源
 
-![architecture](https://docs.google.com/drawings/d/e/2PACX-1vScYQzqv2-cINbIloWrm7G9A88cTWFcdtaUABKvBf8fiUyFPmRd5AblIhwceuv1L85_5uWmKylVwZ13/pub?w=885&h=686)
+![components](https://go.gliffy.com/go/share/image/srp8w54cn0n75xuemfik.png?utm_medium=live-embed&utm_source=custom)
 
 总体分为两层：
 
