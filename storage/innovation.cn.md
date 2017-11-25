@@ -108,7 +108,7 @@ CREATE TABLE event_912 (
   `state`            TEXT         NULL,
   `delta`            TEXT         NULL,
   `committed_at`     DATETIME     NOT NULL       DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`rowkey`)
+  PRIMARY KEY (`event_id`)
 );
 ```
 
