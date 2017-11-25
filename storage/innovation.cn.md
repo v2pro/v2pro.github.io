@@ -32,7 +32,7 @@ title: 创新的主存储方案
 为了支撑以上目标，实现上的几个核心技术选型：
 
 * 状态都在MySQL，自身是无状态的模块
-* 用Javascript写的存储过程托管业务逻辑，替代“数据微服务”的做法
+* 用Javascript写的存储过程托管业务逻辑，“数据微服务”可以快速复制，只需要部署一个dcostore的实例，挂上自己的javascript逻辑就可以了。
 * 文档数据库的数据模型，按entity id进行hash分区
 * 主存储存储的是event（变更日志），而不是entity（最终的状态）。event 以类似kafka队列的方式保存，按序号严格递增。
 * 不额外用zookeeper之类的东西进行选主，把变更日志无冲突写入就算抢到了主
@@ -67,15 +67,25 @@ title: 创新的主存储方案
 
 一次写入操作的过程
 
-* 根据entity id进行hash，获得对应的partition，判断是不是当前服务器负责的。如果不是，则转发。
-* docstore从kvstore里加载entity的最新的版本，也就是一条event。如果取得的event上有state，则直接读取到了。
-* 如果event上没有state，只有delta，则向前搜索之前的event，直到取到一条event包含state为止
-* 把state，叠加其后的所有delta得到一个完整的doc对象
-* 根据event type和command type取得command handler，传入doc对象和command request进行执行
-* command handler直接对doc进行修改，并最终返回command response
-* doc自身记录了所有改动，要么直接序列化doc为state，要么把doc上的改动序列化成delta。
-* 生成一条event，并插入到kvstore。如果没有冲突，则继续
-* 如果event产生了冲突，说明发生了未符合预期的并发写入。刷新集群拓扑，从头开始整个过程。
+1. 客户端通过http请求docstore的endpoint，要求对某个entity执行一个command。
+1. 根据entity id进行hash，获得对应的partition，以及这个partition的master是谁。这个信息并不一定正确，写入的正确性不依赖于master信息的完全准确。
+1. 判断是不是当前服务器负责的。如果不是，则转发给目前的master的endpoint去处理。
+1. endpoint通过go channel发给对应partition的command processor去处理。通过go channel，保证了同一个partition的entity command始终发送给同一个processor串行处理。
+1. processor拿到了entity id之后，需要加载entity的状态。processor在自己的内存里有一个entity的缓存，先查这里。同时获得processor任何当前partition的last event id。
+1. 如果自己缓存里没有，则需要从kvstore里查找entity id对应的最后一次改动的event id，这个东西叫event lookup，后面会说这个event lookup的实时性问题。
+1. 用event id从kvstore里加载entity的最新的版本，也就是一条event。如果取得的event上有state，则直接读取到了。如果没有，就往前追溯，直到找到为止。然后把entity状态重建出来，这个东西叫doc。
+1. 根据event type和command type取得javascript定义的command handler，传入doc对象和command request进行执行。command handler直接对doc进行修改，并最终返回command response。
+1. doc自身记录了所有改动，直接序列化doc的状态变化为delta。如果已经连续数个版本只记录了delta，为了降低状态重建成本，需要把doc整体序列化为state。生成一条event，并插入到kvstore的下一个版本里，也就是event id+1。如果没有冲突，则继续。如果event产生了冲突，说明发生了未符合预期的并发写入。刷新集群拓扑，从头开始整个过程。
+1. 写入了event kv store之后，改动已经可靠落盘了。然后要刷新一下processor内存里的状态缓存，包括entity缓存，以及当前partition的版本号，last event id。
+1. 把新建的event写入event notification channel，通知event processor去做entity lookup的同步，和外部view的同步。然后command processor就完成了这个command的处理了，接着去处理下一个event。注意如果写入event notification channel失败，并不阻塞，直接丢弃。
+1. event processor被唤醒，去处理新进来的event。它要验证这个event和之前处理的上一个event的event id是不是连续的。
+1. 如果不连续，则说明中间发生了阻塞导致的丢弃。这个时候需要把丢掉的event从kv store里读取出来。
+1. 根据event，更新kvstore上记录的entity lookup。然后更新entity lookup的version，也就是last event id。
+1. 起新的goroutine，触发javascript定义的event handler，然后把外部的view更新了。
+
+entity lookup其实就是用entity id维度建立了event历史的二级索引。所以必然会有一个更新不及时，导致不一致的问题。
+
+这里有两个key，一个是entity id对应last event id的key。但是如果仅仅读这个key并不能知道是不是最新的。还需要先校验一下这个partition的entity id=>event id的映射同步到哪里了，也就是最后同步的last event id，即entity lookup的版本号。如果entity lookup的版本小于当前partition的版本。则报错，因为entity id=>event id没有及时同步，无法加载entity的状态。
 
 整个数据库对外提供的主动可调用的api是两个
 
