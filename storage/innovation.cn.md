@@ -65,7 +65,7 @@ title: 创新的主存储方案
 
 ![process](https://go.gliffy.com/go/share/image/sudta8m6xkde7e8g9t3o.png?utm_medium=live-embed&utm_source=custom)
 
-一次写入操作的过程
+一次写入操作的过程，注意这里略去了和command id幂等相关的处理。
 
 1. 客户端通过http请求docstore的endpoint，要求对某个entity执行一个command。
 1. 根据entity id进行hash，获得对应的partition，以及这个partition的master是谁。这个信息并不一定正确，写入的正确性不依赖于master信息的完全准确。
@@ -254,7 +254,7 @@ TODO：具体的"点同步"例子
 
 对于面同步的视图，比如统计每小时的订单量。这种主动push更新的方式是不行的。因为视图的一行记录"每小时订单量"和主存储的entity版本没有对应关系，从而无法实现行级别的幂等更新。只能用严格一致消费历史event的方式进行同步。
 
-# 根据历史数据的修改视图
+# 视图结构的修改
 
 因为主存储现在是schemaless的了，也就没有了因为要保持数据结构一致带来的data migration问题（mysql就需要改写旧的记录都给加上一个空字段）。而主存储的数据本身并没有data migration的需求，因为过去发生的事情，如果没有记录下来的字段，现在是不可能增补的。
 
@@ -264,6 +264,6 @@ TODO：具体的"点同步"例子
 
 # 结语
 
-TODO
+这个方案的面子是文档数据库，里子是CQRS，用起来就像串行读写的内存中的对象一样简单。
 
 
