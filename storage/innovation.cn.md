@@ -130,7 +130,9 @@ CREATE TABLE metadata (
 
 ## node变化的检测
 
-* 启动时候，知道自己这个node是新增的。触发一次partition拓扑的调整
+* 启动时候，知道自己这个node是新增的。触发一次partition拓扑的调整。
+* 转发给master/slave时，发现master/slave不可达。错误累计到一定程度之后触发故障摘除。
+* 定期同步集群所有的node信息，剔除长期没有心跳的node，同时发现新增的node。
 
 
 # 如何解决写入放大问题
