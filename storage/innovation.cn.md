@@ -130,10 +130,32 @@ CREATE TABLE metadata (
 
 ## node变化的检测
 
+* node启动时，以及定期，把自己的信息更新到node列表里，供其它节点发现使用。
 * 启动时候，知道自己这个node是新增的。触发一次partition拓扑的调整。
 * 转发给master/slave时，发现master/slave不可达。错误累计到一定程度之后触发故障摘除。
 * 定期同步集群所有的node信息，剔除长期没有心跳的node，同时发现新增的node。
 
+## partition拓扑的计算
+
+* 从kvstore里恢复出之前的partition拓扑，以此做为基础。
+* 所有没有master的partition，按照所有可用node平均分配。这时并不更新partition的拓扑，只是在内存里标记为master状态
+* 自己负责的所有partition，按照可用node重新均摊之后发现自己负责得过多了。这个时候开始触发step down，在内存里把对应partition的master换掉。同样不去更新kvstore里存储的partition拓扑。
+* 如果近期已经触发了re-balance，不在短期内重复触发
+
+## partition拓扑的一致达成
+
+* 经过前面两步计算，每个node的心目中对每个partition都有一个自己的认为的主了。
+* 如果有写入请求，转发给自己认为的partition的主。如果这个master恰好是自己，则内部处理。
+* node收到了带IsPromoting标志的command的时候，则无论自己是不是mater，都尝试去做写入。由event log判定冲突。如果写入成功则认为抢主成功。
+* node完成了第一次写入之后，把自己是主这个信息更新到partition拓扑里。
+* 如果event log写入失败，则不更新partition拓扑。转发的节点也通过response感知到这个它认为的master实际上不是master。触发一次重新的拓扑计算。
+
+## slave的选择
+
+* slave信息不落盘到kvstore，只保存在node的内存里
+* node初始时不知道slave是谁。只要有读请求，都转发给master去处理。master返回`slave_hint`，包括一个slave的列表。这个时候转发节点就可以缓存下来使用。
+* slave列表定期从master节点进行刷新。或者在slave挂了之后，去master从新刷新。刷新的办法就是把读请求转发给master处理，然后从`slave_hint`里得到slave列表。发请求master的时候，把检测到挂了的slave节点也附带上，从而避免总是拿到挂掉的节点。
+* master根据所有node信息，排除掉挂了的node，随机挑选几个node做为slave。
 
 # 如何解决写入放大问题
 
