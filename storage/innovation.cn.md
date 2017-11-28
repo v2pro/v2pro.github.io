@@ -98,21 +98,23 @@ entity lookup也是和event的kvstore一样，分partition的。每个entity loo
 ```sql
 CREATE TABLE event_912 (
   `event_id`         BIGINT       NOT NULL,
-  `base_event_id`    BIGINT       NOT NULL,
-  `entity_id`        CHAR(12)     NOT NULL,
-  `entity_version`   BIGINT       NOT NULL,
-  `command_id`       CHAR(12)     NOT NULL,
-  `command_name`     VARCHAR(256) NOT NULL,
-  `command_request`  TEXT         NOT NULL,
-  `command_response` TEXT         NOT NULL,
-  `state`            TEXT         NULL,
-  `delta`            TEXT         NULL,
-  `committed_at`     DATETIME     NOT NULL       DEFAULT CURRENT_TIMESTAMP,
+  `data`             TEXT         NOT NULL,
   PRIMARY KEY (`event_id`)
 );
+
+CREATE TABLE lookup_912 (
+  `key`              CHAR(12)  NOT NULL,
+  `event_id`         BIGINT    NOT NULL,
+  PRIMARY KEY (`key`)
+  
+CREATE TABLE metadata (
+  `key`              varchar(32)     NOT NULL,
+  `value`            varchar(256)    NOT NULL,
+  PRIMARY KEY (`key`)
+)
 ```
 
-997个mysql表实际上就是997个独立的队列。event表除了支持kv读写之外，还起到类似kafka队列的作用，用于支持数据同步。
+997个mysql表实际上就是997个独立的队列。event表除了支持kv读写之外，还起到类似kafka队列的作用，用于支持数据同步。lookup表用来存entity/command的反查索引。metadata用来存集群里的节点，以及每个分区的主。
 
 # 如何选主
 
