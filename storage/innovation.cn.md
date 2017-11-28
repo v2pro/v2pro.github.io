@@ -126,6 +126,11 @@ CREATE TABLE metadata (
 * partition拓扑的计算：根据本地算法计算出本node认为的最优化的master/slave分布情况
 * partition拓扑的一致达成：node与node之间沟通，对partition拓扑达成一致。docstore自己本身不额外进行沟通来选主，拓扑信息是在请求的转发过程中附带进行的。不是说你行，你就行，不行也行。而是要知行合一。
 
+下面分为三个部分来论述整个选主过程
+
+## node变化的检测
+
+* 启动时候，知道自己这个node是新增的。触发一次partition拓扑的调整
 
 
 # 如何解决写入放大问题
