@@ -40,3 +40,5 @@ type ErrorNumber interface {
 * 消费 sql 服务，比如访问 mysql
 
 目前实现了两个example的服务器和客户端：[https://github.com/v2pro/plz.service](https://github.com/v2pro/plz.service)
+
+不同的具体实现里可以自由发挥地去添加各种非功能性需求的可复用实现。比如熔断限流，服务发现等功能。这些功能都可以适配到前面定义的 SPI 上。
