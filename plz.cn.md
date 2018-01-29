@@ -16,4 +16,4 @@ PLZ：通过 API 和 SPI 定义非功能性需求的边界
 * [Instrumentation（埋点）：功能性需求代码 <-> 日志/指标/事件，功能性需求代码 <-> expvar/状态页面](/plz/instrumentation.cn.html)
 * [Config（配置读取）：功能性需求代码 <-> 配置/AB测试](/plz/config.cn.html)
 * [Plug-and-Play（集群管理）：功能性需求代码 <-> 进程和服务的集群管理](/plz/pnp.cn.html)
-* [Concurrent: goroutine 生命周期管理](/plz/concurrent.cn.html)
+* [Concurrent（生命周期）: goroutine 生命周期管理](/plz/concurrent.cn.html)
