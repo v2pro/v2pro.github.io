@@ -32,4 +32,66 @@ ERROR：出错了，但是错误在预期范围内。对应 error 返回值的�
 
 FATAL：出错了，而且没有预料到。对应 panic 以及类似的情况。
 
+# 低开销的级别判断：build tags
+
+低成本的实现 tracing 的一种方式就是把 trace 的函数实现变成空的。
+
+```go
+//+build release
+
+package log
+
+func Trace(event string) {
+}
+```
+
+```go
+//+build !release
+
+package log
+
+import "fmt"
+
+func Trace(event string) {
+	fmt.Println(event)
+}
+```
+
+调用 log.Trace 的地方会 inline 函数的实现。如果函数是空的话，则完全没有开销了。通过反汇编我们可以验证这一点：[https://github.com/v2pro/logging-design/tree/master/build-tag](https://github.com/v2pro/logging-design/tree/master/build-tag)
+
+# 低开销的级别判断：if else
+
+使用 build tag 虽然可以实现最低成本的埋点。但是也丧失了灵活性。要想把日志重新打开，还需要重新编译二进制。因为 CPU 对判断有很好的预测能力，所以用 if/else 来判断级别其实并不会有太大的开销。
+
+
+```go
+const LevelTrace = 10
+const LevelDebug = 20
+
+var MinLevel = LevelDebug
+
+func Trace(event string) {
+	if LevelTrace < MinLevel {
+		return
+	}
+	fmt.Println(event)
+}
+```
+
+通过简单的测试
+
+```go
+func Benchmark_trace_branch_predication(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		Trace("hello")
+	}
+}
+```
+
+我们可以看到 if/else 其实开销是很低的。[https://github.com/v2pro/logging-design/tree/master/branch-predication](https://github.com/v2pro/logging-design/tree/master/branch-predication)
+
+
+
+
 
