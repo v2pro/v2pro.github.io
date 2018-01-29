@@ -22,7 +22,7 @@ plz 定义的是 API/SPI 而不是具体实现。对于埋点而言，官方定�
 * 日志输出方式（同步，异步，文件或者网络）
 * 指标统计（在进程内直接进行metrics统计）
 
-这个 API 必须非常容易使用，繁文缛节需要尽可能地少。所以我们选择了静态函数，而不是需要先实例化对象。静态函数也允许编译器进行inline的优化，以及在 release 发布的时候移除掉 trace/debug 的日志调用。
+这个 API 必须非常容易使用，繁文缛节需要尽可能地少。所以我们选择了静态函数，而不是需要先实例化 logger 对象。静态函数也允许编译器进行inline的优化，以及在 release 发布的时候移除掉 trace/debug 的日志调用。
 
 # 日志 API
 
@@ -89,5 +89,23 @@ type Var interface {
 ```
 
 你只要实现了 Var 这个接口，就可以提供一个变量暴露出去。这个expvar可以在问题定位时人工来查询，或者定期采集作为指标统计的输入。
+
+# 指标统计
+
+日志 API 可以用于指标统计。统计的时候需要指定 aggregator。比如
+
+```
+countlog.Info("event!api access", "agg", "counter", "dim", "url,city", "url", "xxxx", "city", "xxxx")
+```
+
+这里的 agg 参数就定义了用 counter 方式来做指标聚合。至于聚合的时间窗口由具体的实现自己决定。聚合的维度由 dim 参数传入，逗号分隔。可以选择的 agg 包括
+
+* counter
+* uniqueCounter
+* ratio
+* histogram (short for p50,p75,p95,p99)
+
+也可以是复合类型的 agg， 比如 call。可以同时统计调用的次数，错误率以及延迟的分布。日志 api 没有提供直接的统计延迟的方法，因为`time.Since`已经足够方便了，没有必要再单独封装一个接口来统计调用时长。
+
 
 
