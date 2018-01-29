@@ -12,10 +12,11 @@ concurrent：goroutine的生命周期
 
 ```go
 type Executor interface {
-	Go(handler func(ctx *countlog.Context))
+  Go(handler func(ctx *countlog.Context))
   Stop()
   StopAndWaitForever()
   StopAndWait(ctx context.Context)
+}
 ```
 
 启动 goroutine 通过 Go 函数替代 go 关键字。停止 executor 可以是立即终止，也可以 graceful shutdown。
