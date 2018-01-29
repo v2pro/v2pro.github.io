@@ -26,6 +26,26 @@ func Fatal(event string, properties ...interface{})
 func Log(level int, event string, properties ...interface{})
 ```
 
+因为经常需要把context作为日志参数。所以在 context 上直接定义了日志输出的快捷方式，默认把 context 加入到日志里。
+
+```go
+type Context struct {
+	context.Context
+}
+func (ctx *Context) Trace(event string, properties ...interface{})
+func (ctx *Context) TraceCall(callee string, err error, properties ...interface{})
+func (ctx *Context) Debug(event string, properties ...interface{})
+func (ctx *Context) DebugCall(callee string, err error, properties ...interface{})
+func (ctx Context) Info(event string, properties ...interface{})
+func (ctx *Context) InfoCall(callee string, err error, properties ...interface{})
+func (ctx *Context) Warn(event string, properties ...interface{})
+func (ctx *Context) Error(event string, properties ...interface{})
+func (ctx *Context) Fatal(event string, properties ...interface{})
+func (ctx *Context) Log(level int, event string, properties ...interface{})
+```
+
+`ctx.Info("event!hello")` 和 `countlog.Info("event!hello", "ctx", ctx)` 是等价的，就是为了写起来更简便一些。日志输出的第一个参数是event名字，必须是用`event!`开头。这么做的目的是为了方便把日志输出和代码里出现的位置关联起来。通过正则可以快速地在代码里找到所有输出的事件。
+
 # expvar
 
 
