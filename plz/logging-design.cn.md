@@ -183,7 +183,7 @@ func Benchmark_empty_interface(b *testing.B) {
 }
 ```
 
-跑一下发现，单词需要104ns，而且有4次内存分配。逃逸分析显示
+跑一下发现，单次需要104ns，而且有4次内存分配。逃逸分析显示
 
 ```
 ./log_test.go:23:16: inlining call to testing.(*B).ReportAllocs
