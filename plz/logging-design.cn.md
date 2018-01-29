@@ -223,6 +223,52 @@ func castEmptyInterfaces(ptr uintptr) []interface{} {
 
 测试代码 [https://github.com/v2pro/logging-design/tree/master/empty-interface](https://github.com/v2pro/logging-design/tree/master/empty-interface)
 
+# 耗时的参数准备
+
+```go
+
+var MinLevel = 20
+
+func Trace(kv ...interface{}) {
+	if 10 < MinLevel {
+		return
+	}
+	ptr := unsafe.Pointer(&kv)
+	ptrAsValue := uintptr(ptr)
+	args := castEmptyInterfaces(ptrAsValue)
+	for i := 0; i < len(args); i += 2 {
+		key := args[i].(string)
+		value := args[i+1].(func() interface{})()
+		blackHole(key)
+		blackHole(value)
+	}
+}
+
+func blackHole(interface{}) {
+}
+
+func castEmptyInterfaces(ptr uintptr) []interface{} {
+	return *(*[]interface{})(unsafe.Pointer(ptr))
+}
+
+var v1 = 1024 * 1024
+var v2 = 4096 * 4096
+
+func Benchmark_expandable_args(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		Trace("k1", func() interface{} {
+			return make([]byte, v1)
+		}, "v2", func() interface{} {
+			return make([]byte, v2)
+		})
+	}
+}
+```
+
+通过把更耗时的参数准备放到 `func() interface{}` 的回掉里，我们可以只在 level 满足要求的时候，才对这些参数进行求值。这个循环跑下来，单次只需要8ns的时间。
+
+测试代码 [https://github.com/v2pro/logging-design/tree/master/expandable-args](https://github.com/v2pro/logging-design/tree/master/expandable-args)
 
 
 
