@@ -3,7 +3,7 @@ layout: default
 title: plz
 ---
 
-PLZ：定义非功能性需求的边界
+PLZ：通过 API 和 SPI 定义非功能性需求的边界
 
 * TOC
 {:toc}
