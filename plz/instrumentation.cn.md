@@ -13,6 +13,16 @@ Instrumentation：问题发现和定位的效率源头
 所有队外暴露事件类型的埋点，统一走日志API。这里包括错误日志，业务事件，以及metrics指标统计。日志 API 定义为静态的函数，主要的考虑是为了效率，需要能够在编译器关掉部分的 trace/debug 日志输出。
 
 ```go
+const LevelTrace = 10
+const LevelDebug = 20
+const LevelInfo = 30
+const LevelWarn = 40
+const LevelError = 50
+const LevelFatal = 60
+
+// MinLevel exists to minimize the overhead of Trace/Debug logging
+var MinLevel = LevelDebug
+
 func ShouldLog(level int) bool
 func Trace(event string, properties ...interface{})
 func TraceCall(callee string, err error, properties ...interface{})
