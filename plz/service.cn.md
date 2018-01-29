@@ -8,7 +8,9 @@ Service：服务接口
 * TOC
 {:toc}
 
-plz service 不定义统一的 API。但是提供统一的 SPI。因为不同的服务暴露方式千差万别，thrift/protobuf/http 等不同的传输协议需要自己的 API 来定义自己的行为。但是所有的服务最终都需要提供 SPI 插入功能性需求代码。比如 http 需要定义给定 URL 对应的 handler。这个统一的 SPI 接口定义如下。
+# Service Provider Interface
+
+plz service 不定义统一的 API（比如如何启动web server，如何解析服务名字）。但是提供统一的 SPI。因为不同的服务暴露方式千差万别，thrift/protobuf/http 等不同的传输协议需要自己的 API 来定义自己的行为。但是所有的服务最终都需要提供 SPI 插入功能性需求代码。比如 http 需要定义给定 URL 对应的 handler。这个统一的 SPI 接口定义如下。
 
 ```go
 func(ctx *countlog.Context, request *mypkg.MyRequest) (response *mypkg.MyResponse, err error)
