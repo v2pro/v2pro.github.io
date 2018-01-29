@@ -8,6 +8,18 @@ Service：服务接口
 * TOC
 {:toc}
 
+# 接口设计的原则
+
+plz 定义的是 API/SPI，而不是具体的实现。非功能性需求有自己的演进步伐，比如从 http 升级到 thrift 传输和编解码。传统的服务框架和web框架的做法没法有效地定义功能性需求和非功能性需求地边界，比如一般地 http 服务的 controller 是这么定义的
+
+```go
+func myController(respWriter http.ResponseWriter, req *http.Request)
+```
+
+controller 里需要耦合具体的传输协议的接口，比如从 `*http.Request` 里获取参数。类似的当我们去调用 http 服务的时候，也是这样的情况。
+
+plz service 的目标是定义一个边界，在边界以内，完全不出现任何和具体的 RPC 方式相关的代码。
+
 # Service Provider Interface
 
 plz service 不定义统一的 API（比如如何启动web server，如何解析服务名字）。但是提供统一的 SPI。因为不同的服务暴露方式千差万别，thrift/protobuf/http 等不同的传输协议需要自己的 API 来定义自己的行为。但是所有的服务最终都需要提供 SPI 插入功能性需求代码。比如 http 需要定义给定 URL 对应的 handler。这个统一的 SPI 接口定义如下。
