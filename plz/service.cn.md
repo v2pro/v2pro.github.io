@@ -29,6 +29,33 @@ type ErrorNumber interface {
 
 如果返回的 error 实现了 `ErrorNumber()` 则会尝试把错误码加入到具体协议的响应里。不同的传输和编解码协议对于错误码的编码方式是不同的。
 
+# 服务器的推荐 API 风格
+
+前面定义的 SPI 需要注册成为服务器的 handler。推荐的 API 风格是这样的：
+
+```go
+func sayHello(ctx countlog.Context, req *MyReqeust) (*MyResponse, error) {
+	// ...
+}
+server := http.NewServer()
+server.Handle("/sayHello", sayHello)
+server.Start("127.0.0.1:9998")
+```
+
+# 客户端的推荐 API 风格
+
+前面定义的 SPI 作为客户端使用的时候，需要获取一个有具体实现的 handler 来进行RPC调用。推荐的 API 风格是这样的：
+
+```go
+var sayHello = func (ctx countlog.Context, req *MyReqeust) (*MyResponse, error)
+client := http.NewClient()
+client.Handle("POST", "http://127.0.0.1:9998/sayHello", &sayHello)
+
+// use sayHello(...) to call server
+```
+
+注意 `&sayHello` 传入了一个指针，从而给 `sayHello` 赋予了一个具体的实现。
+
 # 具体实现
 
 所有的服务提供和调用都可以用前面定义的 SPI 来定义非功能性需求的边界。比如
