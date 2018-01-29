@@ -28,3 +28,15 @@ type ErrorNumber interface {
 ```
 
 如果返回的 error 实现了 `ErrorNumber()` 则会尝试把错误码加入到具体协议的响应里。不同的传输和编解码协议对于错误码的编码方式是不同的。
+
+# 具体实现
+
+所有的服务提供和调用都可以用前面定义的 SPI 来定义非功能性需求的边界。比如
+
+* 提供 http 服务
+* 消费 http 服务
+* 提供 thrift 服务
+* 消费 thrift 服务
+* 消费 sql 服务，比如访问 mysql
+
+目前实现了两个example的服务器和客户端：https://github.com/v2pro/plz.service
