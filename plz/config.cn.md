@@ -36,13 +36,13 @@ func ShouldUse(namespace string, objectName string, targetKV ...string) bool
 
 当配置的值是一个bool类型的时候，可以用 `ShouldUse` 这个快捷方式。实际上等价于
 
-```
+```go
 shouldDropOrder := GetObject("toggle", "shouldDropOrder", "sessionId", "xxxx").(bool)
 ```
 
 # 配置 SPI
 
-```
+```go
 type Parser interface {
 	Parse(data []byte) (interface{}, error)
 }
