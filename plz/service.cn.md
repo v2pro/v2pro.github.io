@@ -39,4 +39,4 @@ type ErrorNumber interface {
 * 消费 thrift 服务
 * 消费 sql 服务，比如访问 mysql
 
-目前实现了两个example的服务器和客户端：https://github.com/v2pro/plz.service
+目前实现了两个example的服务器和客户端：[https://github.com/v2pro/plz.service](https://github.com/v2pro/plz.service)
