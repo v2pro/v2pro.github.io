@@ -58,5 +58,21 @@ func (ctx *Context) Log(level int, event string, properties ...interface{})
 
 # expvar
 
+埋点分成两类。一类是主动推的接口，这个对应的是日志API。另外一类是被动拉的接口，这个对应的是 expvar。Go 官方已经定义了 expvar 的 API：[https://golang.org/pkg/expvar/](https://golang.org/pkg/expvar/)
+
+expvar 也提供了 SPI 可以把进程内部的业务变量的值直接暴露出来
+
+```go
+func Publish(name string, v Var)
+
+type Var interface {
+        // String returns a valid JSON value for the variable.
+        // Types with String methods that do not return valid JSON
+        // (such as time.Time) must not be used as a Var.
+        String() string
+}
+```
+
+你只要实现了 Var 这个接口，就可以提供一个变量暴露出去。这个expvar可以在问题定位时人工来查询，或者定期采集作为指标统计的输入。
 
 
