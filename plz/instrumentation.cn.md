@@ -94,8 +94,12 @@ type Var interface {
 
 日志 API 可以用于指标统计。统计的时候需要指定 aggregator。比如
 
-```
-countlog.Info("event!api access", "agg", "counter", "dim", "url,city", "url", "xxxx", "city", "xxxx")
+```go
+countlog.Info("event!api access", 
+  "agg", "counter", 
+  "dim", "url,city", 
+  "url", "xxxx", 
+  "city", "xxxx")
 ```
 
 这里的 agg 参数就定义了用 counter 方式来做指标聚合。至于聚合的时间窗口由具体的实现自己决定。聚合的维度由 dim 参数传入，逗号分隔。可以选择的 agg 包括
