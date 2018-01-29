@@ -20,6 +20,22 @@ controller 里需要耦合具体的传输协议的接口，比如从 `*http.Requ
 
 plz service 的目标是定义一个边界，在边界以内，完全不出现任何和具体的 RPC 方式相关的代码。
 
+关于服务依赖的问题，比如我们的代码依赖一个 passport 服务。在测试等场景下，我们有替换这个具体服务的实现的需求。一般来说，有三种做法
+
+* 依赖注入：通过函数参数或者对象组装实现 IoC
+* Service Locator：在调用的时候去获取具体的实现
+* 全局依赖注入
+
+我们选择的代码风格是全局依赖注入。也就是
+
+```
+var validatePassport = func(*countlog.Context, *passport.Ticket) (*passport.Result, error)
+
+// use validatePassport directly as a function
+```
+
+在运行时，把不同的函数实现赋给 `validatePassport` 这个函数指针，从而切换实现。这种代码风格比依赖注入和Service Locator更简洁，Boilerplate code 更少。
+
 # Service Provider Interface
 
 plz service 不定义统一的 API（比如如何启动web server，如何解析服务名字）。但是提供统一的 SPI。因为不同的服务暴露方式千差万别，thrift/protobuf/http 等不同的传输协议需要自己的 API 来定义自己的行为。但是所有的服务最终都需要提供 SPI 插入功能性需求代码。比如 http 需要定义给定 URL 对应的 handler。这个统一的 SPI 接口定义如下。
