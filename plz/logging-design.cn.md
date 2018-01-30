@@ -448,7 +448,7 @@ Trace("xxxx", k1, v1, k2, v2)
 
 Go 的错误处理很难写得很漂亮。
 
-```
+```go
 input := []byte(`1,2,3]`)
 var value interface{}
 err := json.Unmarshal(input, &val)
@@ -459,3 +459,87 @@ if err != nil {
 
 用户得到错误消息是 `invalid character ',' after top-level value`。如果没有加任何日志话，这个错误就很难找原因了。
 
+```go
+func handleNewOrder(input []byte) error {
+	var val interface{}
+	err := json.Unmarshal(input, &val)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal new order request: %s", err.Error())
+	}
+	return nil
+}
+
+func Test(t *testing.T) {
+	input := []byte(`1,2,3]`)
+	fmt.Println(handleNewOrder(input))
+}
+```
+
+通过 `fmt.Errorf` 包装之后的错误消息至少知道是哪里有错误了。但是对于定位问题来说，仍然需要知道更多的信息，比如原始的 input 是什么。
+
+```go
+
+var MinLevel = 20
+
+func DebugCall(callee string, err error, kv ...interface{}) {
+	level := 10
+	if err != nil {
+		level = 30
+	}
+	if level < MinLevel {
+		return
+	}
+}
+
+func handleNewOrder(input []byte) error {
+	var val interface{}
+	err := json.Unmarshal(input, &val)
+	DebugCall("callee!json.Unmarshal", err,
+		"input", input)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal new order request: %s", err.Error())
+	}
+	return nil
+}
+
+func Test(t *testing.T) {
+	input := []byte(`1,2,3]`)
+	fmt.Println(handleNewOrder(input))
+}
+```
+
+添加了 `TraceCall` 之后，我们可以获得
+
+* 出错的时候，提供 input 的详情的日志
+* 当日志级别是 DEBUG 的时候，统计这个调用的出错率，以及延迟
+* 当日志级别是 TRACE 的时候，直接把这个调用打印到日志里。因为默认 DEBUG 的时候是只做统计的，所以要调低一个日志级别才会出详情。
+
+对于生产环境的常态，生产环境调试，测试环境定位问题，三个不同的场景可以复用同一行埋点代码。
+
+# 低成本的延迟统计
+
+```go
+func emptyFunc() error {
+	return nil
+}
+
+type Gauge int64
+
+func TraceGauge() Gauge {
+	if 10 < MinLevel {
+		return 0
+	}
+	return Gauge(time.Now().UnixNano())
+}
+
+func Benchmark_empty_trace(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		gauge := TraceGauge()
+		err := emptyFunc()
+		TraceCall("callee!emptyFunc", err, "gauge", gauge)
+	}
+}
+```
+
+在没有开 trace 的情况下，TraceGauge 被跳过了。单次执行耗时只需要 8ns 的时间。
