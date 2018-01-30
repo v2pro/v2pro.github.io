@@ -95,7 +95,7 @@ func Benchmark_trace_branch_predication(b *testing.B) {
 
 我们可以看到 if/else 其实开销是很低的。[https://github.com/v2pro/logging-design/tree/master/branch-predication](https://github.com/v2pro/logging-design/tree/master/branch-predication)
 
-# 参数传递怎么办？
+## 参数传递怎么办？
 
 传统的日志打印的最佳实践是
 
@@ -160,7 +160,7 @@ func Trace(kv ...string) {
 
 对应的测试代码 [https://github.com/v2pro/logging-design/tree/master/variable-args](https://github.com/v2pro/logging-design/tree/master/variable-args)
 
-# interface{} 是不是一个好主意呢？
+## interface{} 是不是一个好主意呢？
 
 既然变长的 string 没问题，那么变长的 `interface{}` 是不是也可以呢？
 
@@ -227,7 +227,7 @@ func castEmptyInterfaces(ptr uintptr) []interface{} {
 
 测试代码 [https://github.com/v2pro/logging-design/tree/master/empty-interface](https://github.com/v2pro/logging-design/tree/master/empty-interface)
 
-# 耗时的参数准备
+## 耗时的参数准备
 
 ```go
 
@@ -274,7 +274,7 @@ func Benchmark_expandable_args(b *testing.B) {
 
 测试代码 [https://github.com/v2pro/logging-design/tree/master/expandable-args](https://github.com/v2pro/logging-design/tree/master/expandable-args)
 
-# 去掉变长参数
+## 去掉变长参数
 
 通过前面的实验，我们可以看到 Go 的编译器还没有办法把变长参数的构造给完全优化掉。虽然传递过去的参数实际上并不会被使用，inline 并不会把 if 的判断往前提。zerolog 和 zap 的做法是不用变长参数进行传参。
 
@@ -375,7 +375,7 @@ func Benchmark_zerolog(b *testing.B) {
 
 这个单次的速度是 3ns，仍然要快很多。
 
-# unsafe.Pointer 是危险的
+## unsafe.Pointer 是危险的
 
 通过 `unsafe.Pointer` 我们接管了逃逸分析。如果使用不当，就会导致引用已经释放了的栈上的值。下面演示一个滥用之后导致出错的例子：
 
@@ -426,7 +426,7 @@ func Benchmark_A(b *testing.B) {
 
 运行后会发现 panic 被触发了。因为 ctx 里保存的 `interface{}` 引用了B的栈上分配的对象，而 B 退出之后这个对象已经失效了。
 
-# 传参方式的结论
+## 传参方式的结论
 
 虽然 zerolog 的传参方式看起来很有吸引力。但是我们仍然选择 `...interface{}`。因为从使用的角度来说
 
@@ -441,3 +441,21 @@ Trace("xxxx", k1, v1, k2, v2)
 ```
 
 这种写法明显更容易让人接受。在性能非常敏感的场景下， 还是用 `if ShouldLog(DEBUG) {}` 这样的写法吧。毕竟 zerolog 的写法虽然开销小，也不是没有开销的。而且在命中了 log level 之后，zerolog 还是要分配空间来保存参数的，虽然用 sync.Pool 做了全局的对象池共享。引入 sync.Pool 又增加了多线程之间的同步开销。
+
+对于 `func() interface{}`，我们选择不使用这种写法。如果有昂贵的计算需要，应该用 `if ShouldLog(DEBUG) {}` 这个写法。
+
+# 错误处理的写法
+
+Go 的错误处理很难写得很漂亮。
+
+```
+input := []byte(`1,2,3]`)
+var value interface{}
+err := json.Unmarshal(input, &val)
+if err != nil {
+   return err
+}
+```
+
+用户得到错误消息是 `invalid character ',' after top-level value`。如果没有加任何日志话，这个错误就很难找原因了。
+
