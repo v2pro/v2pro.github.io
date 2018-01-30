@@ -422,5 +422,18 @@ func Benchmark_A(b *testing.B) {
 
 运行后会发现 panic 被触发了。因为 ctx 里保存的 `interface{}` 引用了B的栈上分配的对象，而 B 退出之后这个对象已经失效了。
 
+# 传参方式的结论
 
+虽然 zerolog 的传参方式看起来很有吸引力。但是我们仍然选择 `...interface{}`。因为从使用的角度来说
 
+```
+Trace().Int64(k1, v1).Float64(k2, v2).Msg("xxxx")
+```
+
+看起来实在是太奇怪了。如果忘记了调用 Msg 则不会有日志输出。
+
+```
+Trace("xxxx", k1, v1, k2, v2)
+```
+
+这种写法明显更容易让人接受。在性能非常敏感的场景下， 还是用 `if ShouldLog(DEBUG) {}` 这样的写法吧。毕竟 zerolog 的写法虽然开销小，也不是没有开销的。而且在命中了 log level 之后，zerolog 还是要分配空间来保存参数的，虽然用 sync.Pool 做了全局的对象池共享。引入 sync.Pool 又增加了多线程之间的同步开销。
