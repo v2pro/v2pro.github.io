@@ -371,5 +371,56 @@ func Benchmark_zerolog(b *testing.B) {
 
 这个单次的速度是 3ns，仍然要快很多。
 
+# unsafe.Pointer 是危险的
+
+通过 `unsafe.Pointer` 我们接管了逃逸分析。如果使用不当，就会导致引用已经释放了的栈上的值。下面演示一个滥用之后导致出错的例子：
+
+```go
+type SomeValue struct{
+	string
+	float64
+}
+
+func A() {
+	ctx := map[string]interface{}{}
+	B(ctx)
+	C(ctx)
+	if ctx["hello"].(SomeValue).float64 != 10.24 {
+		panic("invalid")
+	}
+}
+
+//go:noinline
+func B(ctx map[string]interface{}) {
+	var obj interface{} = SomeValue{"hello", 10.24}
+	ptr := unsafe.Pointer(&obj)
+	ctx["hello"] = castEmptyInterface(uintptr(ptr))
+}
+
+//go:noinline
+func C(ctx map[string]interface{}) interface{} {
+	a := ctx["hello"]
+	b := ctx["hello"]
+	if a == nil {
+		return a
+	}
+	return b
+}
+
+
+func castEmptyInterface(ptr uintptr) interface{} {
+	return *(*interface{})(unsafe.Pointer(ptr))
+}
+
+func Benchmark_A(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		A()
+	}
+}
+```
+
+运行后会发现 panic 被触发了。因为 ctx 里保存的 `interface{}` 引用了B的栈上分配的对象，而 B 退出之后这个对象已经失效了。
+
 
 
