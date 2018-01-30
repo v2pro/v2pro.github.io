@@ -266,11 +266,110 @@ func Benchmark_expandable_args(b *testing.B) {
 }
 ```
 
-通过把更耗时的参数准备放到 `func() interface{}` 的回掉里，我们可以只在 level 满足要求的时候，才对这些参数进行求值。这个循环跑下来，单次只需要8ns的时间。
+通过把更耗时的参数准备放到 `func() interface{}` 的回掉里，我们可以只在 level 满足要求的时候，才对这些参数进行求值。这个循环跑下来，单次只需要8ns的时间。这个验证了构造closure的实例并不会消耗特别多的资源。
 
 测试代码 [https://github.com/v2pro/logging-design/tree/master/expandable-args](https://github.com/v2pro/logging-design/tree/master/expandable-args)
 
+# 去掉变长参数
 
+通过前面的实验，我们可以看到 Go 的编译器还没有办法把变长参数的构造给完全优化掉。虽然传递过去的参数实际上并不会被使用，inline 并不会把 if 的判断往前提。zerolog 和 zap 的做法是不用变长参数进行传参。
+
+```go
+var MinLevel = 20
+
+func Trace() *Event {
+	if 10 < MinLevel {
+		return nil
+	}
+	return &Event{}
+}
+```
+
+如果 log 级别不满足，返回的是空的 event 对象
+
+```go
+type Event struct {
+	keys []string
+	values []interface{}
+}
+
+func (event *Event) Float64(key string, value float64) *Event {
+	if event == nil {
+		return event
+	}
+	if event.keys != nil {
+		event.keys = append(event.keys, key)
+	}
+	event.values = append(event.values, value)
+	return event
+}
+
+func (event *Event) Int(key string, value int) *Event {
+	if event == nil {
+		return event
+	}
+	if event.keys != nil {
+		event.keys = append(event.keys, key)
+	}
+	event.values = append(event.values, value)
+	return event
+}
+```
+
+如果 event 为空，则不做任何操作返回
+
+```go
+var k1 = "k1"
+var v1 = 100
+var k2 = "k2"
+var v2 = 10.24
+
+func Benchmark_zerolog(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		e := Trace()
+		e = e.Int(k1, v1)
+		e = e.Float64(k2, v2)
+		e.Log()
+	}
+}
+```
+
+benchmark 跑下来，一次需要 1.5 ns。相比之前的 `...interface{}`，速度要快很多。可以看见创建 `[]interface{}` 的开销被省掉了。当然这里用的是有类型的接口和 `interface{}` 比，不是很公平。
+
+```go
+func (event *Event) Object(key string, value interface{}) *Event {
+	if event == nil {
+		return event
+	}
+	if event.keys != nil {
+		event.keys = append(event.keys, key)
+	}
+	ptr := unsafe.Pointer(&value)
+	event.values = append(event.values, castEmptyInterface(uintptr(ptr)))
+	return event
+}
+
+func castEmptyInterface(ptr uintptr) interface{} {
+	return *(*interface{})(unsafe.Pointer(ptr))
+}
+```
+
+对比一下 `interface{}` 的情况
+
+```go
+func Benchmark_zerolog(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		e := Trace()
+		e = e.Object(k1, v1)
+		e = e.Object(k2, v2)
+		e.Log()
+	}
+}
+```
+
+这个单次的速度是 3ns，仍然要快很多。
 
 
 
