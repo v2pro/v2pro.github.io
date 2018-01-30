@@ -32,7 +32,11 @@ ERROR：出错了，但是错误在预期范围内。对应 error 返回值的�
 
 FATAL：出错了，而且没有预料到。对应 panic 以及类似的情况。
 
-# 低开销的级别判断：build tags
+# 低成本的 tracing
+
+tracing 在没有打开的情况下，应该是低成本的。debug 也是一样。但是如果所有的地方都要写 if/else 的判断就太麻烦了。
+
+## 低开销的级别判断：build tags
 
 低成本的实现 tracing 的一种方式就是把 trace 的函数实现变成空的。
 
@@ -59,7 +63,7 @@ func Trace(event string) {
 
 调用 log.Trace 的地方会 inline 函数的实现。如果函数是空的话，则完全没有开销了。通过反汇编我们可以验证这一点：[https://github.com/v2pro/logging-design/tree/master/build-tag](https://github.com/v2pro/logging-design/tree/master/build-tag)
 
-# 低开销的级别判断：if else
+## 低开销的级别判断：if else
 
 使用 build tag 虽然可以实现最低成本的埋点。但是也丧失了灵活性。要想把日志重新打开，还需要重新编译二进制。因为 CPU 对判断有很好的预测能力，所以用 if/else 来判断级别其实并不会有太大的开销。
 
