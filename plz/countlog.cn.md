@@ -90,7 +90,7 @@ if err != nil {
 * 对于同事：我们需要给出相对齐全的指标体系。比如接口的错误率，以及平均调用延迟。通过这些指标的监控告警，同事们才能在出问题的时候，找出哪个模块是根本原因。从而能让你来跟进后续的处理。
 * 对于你自己：最终我们要为自己写的代码负责。如果出了问题，没有足够的信息来还原故障现场。那必然会浪费大量的时间在各种猜测上。同时在开发的过程中，频频需要定位一些低级错误。如果有完善的调用跟踪（tracing），可以很容易地知道问题是怎么发生的。
 
-如果要把这三方面的需求都满足到位了。实际的错误处理代码远比 `if err !- nil` 更复杂。大概会写成这个样子：
+如果要把这三方面的需求都满足到位了。实际的错误处理代码远比 `if err != nil` 更复杂。大概会写成这个样子：
 
 ```go
 err := json.Unmarshal(input, &gameScores)
@@ -105,3 +105,50 @@ if err != nil {
 ```
 
 如果每个地方都要这么写。很快这些代码会把正常的业务逻辑给淹没掉。所以实际的情况是，大部分情况下我们都直接 `if err != nil { return err }` 就搞定了。然后在出了问题之后，再回代码里加上一些必要的日志和埋点。countlog 的目标是让你可以在第一遍写代码的时候就把必要的埋点都给低阅读成本，低执行成本地给添加上了。从而给开发，测试，故障定位节省大量的时间，从而提高整体的开发效率。
+
+```go
+input := `[1,2,3`
+var gameScores []int
+err := json.Unmarshal(input, &gameScores)
+err = countlog.TraceCall("read game scores", err, "input", input)
+if err != nil {
+  return err
+}
+```
+
+这里会同时做四件事情：
+
+* 包装 error：countlog.TraceCall 返回的 error 是添加了 read game scores 这个前缀的。
+* 错误日志：在出错的情况下，虽然这是一个 trace 级别的日志，仍然会按照 warn 的级别打印出日志。
+* 指标统计：在没有出错的情况下，如果日志级别是 trace，会进行错误率的统计，然后发给对接的监控系统。
+* 调用跟踪：如果日志级别设置得比 trace 还低半级（也就是 countlog.LevelTraceCall 这个级别），会把原始的调用详情也逐条打印出来。这个就相当于调试代码时添加的 fmt.Println 的作用了。
+
+我们的建议是给所有会返回 error 的函数调用添加上 countlog.TraceCall （或者 DebugCall 和 InfoCall）。给所有的 RPC 远程函数调用加上 countlog.InfoCall。这样，我们对程序就有一个最基础的调用埋点了。那么问题是，所有地方都添加日志会不会很消耗性能？传统的日志打印的最佳实践是这样的：
+
+```go
+input := `[1,2,3`
+var gameScores []int
+err := json.Unmarshal(input, &gameScores)
+if ShouldLog(LevelTrace) {
+  log(LevelTrace, fmt.Sprintf("read game scores: %s", input))
+}
+if err != nil {
+  return err
+}
+```
+
+因为传统的日志库，虽然可以在内部通过级别判断是否打印日志。但是调用日志库本身的开销已经足够大了。所以要求用户在性能关键的路径调用 trace 或者 debug 的时候都需要添加 if 判断。但是这样搞，代码的可读性就更差了。我们来看一下实际上 countlog.TraceCall 在级别不满足的时候的开销。
+
+```go
+func Benchmark_trace(b *testing.B) {
+	SetMinLevel(LevelDebug)
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		TraceCall("event!hello", nil, "a", "b")
+	}
+}
+
+// 1000000000	         7.24 ns/op	       0 B/op	       0 allocs/op
+```
+
+实际跑出来的结果是，单次调用成本在 10ns 以内。在大部分的业务代码里，这点开销是完全可以忽略不计的。
