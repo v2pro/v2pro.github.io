@@ -120,7 +120,7 @@ if err != nil {
 
 * 包装 error：countlog.TraceCall 返回的 error 是添加了 read game scores 这个前缀的。
 * 错误日志：在出错的情况下，虽然这是一个 trace 级别的日志，仍然会按照 warn 的级别打印出日志。
-* 指标统计：在没有出错的情况下，如果日志级别是 trace，会进行错误率的统计，然后发给对接的监控系统。
+* 指标统计：在没有出错的情况下，如果日志级别是 trace，会进行错误率的统计，然后发给对接的监控系统。后面会展开讲指标统计的功能。
 * 调用跟踪：如果日志级别设置得比 trace 还低半级（也就是 countlog.LevelTraceCall 这个级别），会把原始的调用详情也逐条打印出来。这个就相当于调试代码时添加的 fmt.Println 的作用了。
 
 我们的建议是给所有会返回 error 的函数调用添加上 countlog.TraceCall （或者 DebugCall 和 InfoCall）。给所有的 RPC 远程函数调用加上 countlog.InfoCall。这样，我们对程序就有一个最基础的调用埋点了。那么问题是，所有地方都添加日志会不会很消耗性能？传统的日志打印的最佳实践是这样的：
@@ -141,14 +141,43 @@ if err != nil {
 
 ```go
 func Benchmark_trace(b *testing.B) {
-	SetMinLevel(LevelDebug)
+	countlog.SetMinLevel(LevelDebug)
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		TraceCall("event!hello", nil, "a", "b")
+		countlog.TraceCall("event!hello", nil, "a", "b")
 	}
 }
 
 // 1000000000	         7.24 ns/op	       0 B/op	       0 allocs/op
 ```
 
-实际跑出来的结果是，单次调用成本在 10ns 以内。在大部分的业务代码里，这点开销是完全可以忽略不计的。
+实际跑出来的结果是，单次调用成本在 10ns 以内。在大部分的业务代码里，这点开销是完全可以忽略不计的。从而可以省掉 trace 前的 if 判断。
+
+# 日志文件
+
+如果要把日志输出到文件，需要制定 writer
+
+```go
+logFile, err := os.OpenFile("/tmp/test.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+defer logFile.Close()
+EventWriter = output.NewEventWriter(output.EventWriterConfig{
+	Format: &compact.Format{},
+	Writer: logFile,
+})
+Info("something happened", "input", "abc", "output", "def")
+```
+
+在日志文件 `/tmp/test.log` 里就有了刚打印的日志。默认情况下，日志是同步输出的。也就是 i/o 的时间也包含在了打日志的时间里。如果需要启用异步日志 i/o，给 EventWriter 设置一个异步的 executor：
+
+```go
+EventWriter = output.NewEventWriter(output.EventWriterConfig{
+	Format: &compact.Format{},
+	Writer: logFile,
+	Executor: output.DefaultExecutor,
+})
+```
+
+如果需要滚动日志
+
+TODO
+
