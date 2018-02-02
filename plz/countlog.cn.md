@@ -61,6 +61,7 @@ countlog.EventWriter = output.NewEventWriter(output.EventWriterConfig{
 a = 1
 b = 1
 c = a + b
+// countlog.EventWriter 已经修改成用 &printf.Format{} 定义的格式输出
 countlog.Trace(
   "%(a)s + %(b)s = %(c)s", 
   "a", a, 
