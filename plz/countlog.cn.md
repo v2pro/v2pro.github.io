@@ -188,9 +188,9 @@ EventWriter = output.NewEventWriter(output.EventWriterConfig{
 import "github.com/v2pro/plz/countlog/output/lumberjack"
 
 logFile := &lumberjack.Logger{
-	BackupTimeFormat: "2006-01-02T15-04-05.000",
-	Filename:   "/tmp/test.log",
-	MaxSize:    1, // megabytes
+	BackupTimeFormat: "2006-01-02T15-04-05.000", // 旧文件会加上时间后缀
+	Filename:   "/tmp/test.log",
+	MaxSize:    100, // megabytes，每100M滚动一个新文件
 	MaxBackups: 3,
 }
 defer logFile.Close()
@@ -201,4 +201,9 @@ EventWriter = output.NewEventWriter(output.EventWriterConfig{
 ```
 
 滚动日志的实现拷贝自 https://github.com/natefinch/lumberjack 。目前仅支持按文件大小滚动，还不支持按小时滚动。
+
+如果需要按不同的日志级别输出到不同的日志文件
+
+```go
+```
 
