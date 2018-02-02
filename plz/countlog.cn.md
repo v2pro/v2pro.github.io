@@ -205,5 +205,29 @@ EventWriter = output.NewEventWriter(output.EventWriterConfig{
 如果需要按不同的日志级别输出到不同的日志文件
 
 ```go
+infoLogFile, err := os.OpenFile("/tmp/test.info.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+defer infoLogFile.Close()
+infoWriter := output.NewEventWriter(output.EventWriterConfig{
+	Format: &compact.Format{},
+	Writer: infoLogFile,
+})
+errorLogFile, err := os.OpenFile("/tmp/test.error.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+defer errorLogFile.Close()
+errorWriter := output.NewEventWriter(output.EventWriterConfig{
+	Format: &compact.Format{},
+	Writer: errorLogFile,
+})
+// 通过自定义函数，组合多个 event writer
+EventWriter = spi.FuncEventSink(func(site *spi.LogSite) spi.EventHandler {
+	infoHandler := infoWriter.HandlerOf(site)
+	errorHandler := errorWriter.HandlerOf(site)
+	return spi.FuncEventHandler(func(event *spi.Event) {
+		if event.Level > spi.LevelInfo {
+			errorHandler.Handle(event)
+		} else {
+			infoHandler.Handle(event)
+		}
+	})
+})
 ```
 
