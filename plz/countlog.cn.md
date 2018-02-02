@@ -155,7 +155,7 @@ func Benchmark_trace(b *testing.B) {
 
 # 日志文件
 
-如果要把日志输出到文件，需要制定 writer
+如果要把日志输出到文件，需要指定输出到什么 writer
 
 ```go
 logFile, err := os.OpenFile("/tmp/test.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
