@@ -231,3 +231,34 @@ EventWriter = spi.FuncEventSink(func(site *spi.LogSite) spi.EventHandler {
 })
 ```
 
+# 日志格式
+
+内置支持了4种日志格式。每种日志格式可以用自己的选项再去微调自己不同字段的格式。这些包都在 `github.com/v2pro/plz/countlog/output` 下。打印 `Trace("hello", "a", "b", "int", 100)`， 获得的样本如下
+
+```
+// github.com/v2pro/plz/countlog/output/hrf
+// human readable format
+
+=== [TRACE] hello ===
+a: b
+int: 100
+```
+
+```
+// github.com/v2pro/plz/countlog/output/compact
+
+hello||timestamp=2018-02-02T22:33:19+08:00||a=b||int=100
+```
+
+```
+// github.com/v2pro/plz/countlog/output/printf
+
+hello
+```
+
+```
+// github.com/v2pro/plz/countlog/output/json
+
+{"event":"hello","a":"b","int":100}
+```
+
