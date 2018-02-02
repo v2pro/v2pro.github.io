@@ -50,8 +50,8 @@ import "github.com/v2pro/plz/countlog"
 import "os"
 
 countlog.EventWriter = output.NewEventWriter(output.EventWriterConfig{
-Format: &printf.Format{},
-Writer: os.Stdout,
+  Format: &printf.Format{},
+  Writer: os.Stdout,
 })
 ```
 
@@ -66,7 +66,7 @@ countlog.Trace(
   "a", a, 
   "b", b, 
   "c", c)
-``
+```
 
 输出的日志就是 `1 + 1 = 2` 了。这里和 `fmt.Println` 还是稍有不同，fmt 用的是顺序来标识参数，而 countlog 使用的是名字来标识参数。
 
