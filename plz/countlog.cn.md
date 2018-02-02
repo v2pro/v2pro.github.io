@@ -172,12 +172,17 @@ Info("something happened", "input", "abc", "output", "def")
 ```go
 EventWriter = output.NewEventWriter(output.EventWriterConfig{
 	Format: &compact.Format{},
-	Writer: logFile,
-	Executor: output.DefaultExecutor,
+	Writer: output.NewAsyncWriter(output.AsyncWriterConfig{
+		QueueLength: 1024,
+		IsQueueBlocking: false,
+		Writer: logFile,
+	}),
 })
 ```
 
+如果设置为非阻塞的队列，则存在日志打得太快了会丢消息的问题。这种情况下默认的行为是在 stderr 上每一千条丢弃的日志输出一条错误消息。你可以通过 OnMessageDropped 来改写这个行为。
+
 如果需要滚动日志
 
-TODO
+
 
